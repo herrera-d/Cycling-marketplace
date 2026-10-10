@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "orchestrator",
+  "commands": {
+    "fase": {
+      "description": "Ejecuta una fase del plan con el equipo de agentes",
+      "template": "Ejecuta la fase $ARGUMENTS siguiendo el workflow del PLAN.md: implementa con frontend-dev (y ui-designer si aplica), audita con security-auditor, valida con requirements-validator y mantén docs/progress.md actualizado hasta lograr PASS."
+    },
+    "validar": {
+      "description": "Valida la última fase implementada contra su DoD",
+      "template": "Lanza requirements-validator para validar la fase $ARGUMENTS contra su DoD (sección 9.1 del PLAN.md. Si da FAIL, coordina las correcciones con frontend-dev/ui-designer y re-valida."
+    },
+    "auditar": {
+      "description": "Auditoría de seguridad completa del proyecto",
+      "template": "Lanza security-auditor para una auditoría completa de seguridad del proyecto: auth, API routes, uploads, secretos, rate limiting y dependencias. Reporta los hallazgos por severidad."
+    }
+  }
+}
