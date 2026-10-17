@@ -10,7 +10,7 @@ Estado por fases gestionado por el agente `orchestrator` tras cada iteración de
 | 1 | Base de datos: Neon + Drizzle, schema, migraciones, seed | ✅ Completado | Neon PG 17.11 · 5 tablas · seed 9 categorías |
 | 2 | Auth: Google OAuth, adaptador, navbar | ✅ Completado | Auth.js v5 + Drizzle · JWT · `proxy.ts` (Next 16 renombró middleware) |
 | 3 | Feed + filtros + infinite scroll | ✅ Completado | `GET /api/listings` cursor keyset · filtros en SQL · URL sincronizada · 27 anuncios demo |
-| 4 | Detalle del artículo | ⬜ Pendiente | — |
+| 4 | Detalle del artículo | ✅ Completado | `/listings/[id]` pública · galería 4 imágenes · CTA favorito + API `POST/DELETE /api/favorites/:id` · metadata + 404 |
 | 5 | Publicar artículos + Supabase Storage | ⬜ Pendiente | — |
 | 6 | Favoritos | ⬜ Pendiente | — |
 | 7 | Gestión de mis publicaciones | ⬜ Pendiente | — |

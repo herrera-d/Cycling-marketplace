@@ -1,5 +1,3 @@
-import { BadgeCheck } from "lucide-react";
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { ListingSeller } from "@/lib/listings-types";
 
@@ -37,13 +35,7 @@ export function SellerCard({ seller }: { seller: ListingSeller }) {
       </Avatar>
 
       <div className="min-w-0">
-        <p className="flex items-center gap-1.5 font-medium">
-          <span className="truncate">{seller.name ?? "Vendedor"}</span>
-          <BadgeCheck
-            className="size-4 shrink-0 text-primary"
-            aria-label="Vendedor verificado"
-          />
-        </p>
+        <p className="truncate font-medium">{seller.name ?? "Vendedor"}</p>
         {since ? (
           <p className="text-sm text-muted-foreground">
             En BiciMarket desde {since}

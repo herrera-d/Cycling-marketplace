@@ -146,6 +146,12 @@ export default async function ListingDetailPage({
                 <CategoryIcon name={listing.categoryIcon} className="size-3" />
                 {listing.categoryName}
               </Badge>
+              {listing.location ? (
+                <Badge variant="outline">
+                  <MapPin className="size-3" aria-hidden="true" />
+                  {listing.location}
+                </Badge>
+              ) : null}
               {listing.status === "sold" ? (
                 <Badge variant="destructive">Vendido</Badge>
               ) : null}
@@ -161,13 +167,9 @@ export default async function ListingDetailPage({
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              {listing.location ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="size-4" aria-hidden="true" />
-                  {listing.location}
-                </span>
-              ) : null}
-              <span>Publicado el {DATE_FORMAT.format(new Date(listing.createdAt))}</span>
+              <span>
+                Publicado el {DATE_FORMAT.format(new Date(listing.createdAt))}
+              </span>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
