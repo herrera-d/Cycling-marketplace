@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 // Permite ejecutar `npm run db:seed` con .env.local (Next) o .env.
 config({ path: [".env.local", ".env"] });
@@ -102,13 +102,14 @@ async function main() {
   }));
 
   // Las imágenes no tienen clave natural: se reemplazan para mantener el
-  // seed idempotente.
+  // seed idempotente. `inArray` parametriza los IDs (nada de SQL crudo).
   await db
     .delete(listingImages)
     .where(
-      sql`${listingImages.listingId} IN ${sql.raw(
-        `(${DEMO_LISTINGS.map((l) => `'${l.id}'`).join(",")})`,
-      )}`,
+      inArray(
+        listingImages.listingId,
+        DEMO_LISTINGS.map((listing) => listing.id),
+      ),
     );
   await db.insert(listingImages).values(imageValues);
 

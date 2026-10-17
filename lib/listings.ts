@@ -23,6 +23,19 @@ import {
   type ListingQuery,
 } from "@/lib/validations";
 
+/** Límite de `integer` de Postgres (`price_cents` es int4). */
+const MAX_PRICE_CENTS = 2_147_483_647;
+
+/** Escapa los comodines de `LIKE`/`ILIKE` para que la búsqueda sea literal. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+/** Evita el desbordamiento de `int4` al pasar de unidades mayores a centavos. */
+function clampPriceCents(value: number): number {
+  return Math.min(Math.max(value, 0), MAX_PRICE_CENTS);
+}
+
 /**
  * Codifica/decodifica el cursor de paginación (keyset).
  *
@@ -47,21 +60,25 @@ function decodeCursor(raw: string | undefined): DecodedCursor | null {
 
 /** Condición SQL que continúa la paginación según el orden activo. */
 function cursorCondition(cursor: DecodedCursor): SQL | undefined {
-  if (cursor.s === "precio_asc") {
+  if (cursor.s === "precio_asc" || cursor.s === "precio_desc") {
     const value = Number(cursor.v);
-    return or(
-      gt(listings.priceCents, value),
-      and(eq(listings.priceCents, value), gt(listings.id, cursor.id)),
-    );
+    // Cursor manipulado: se ignora en vez de romper la consulta con un 500.
+    if (!Number.isInteger(value) || value < 0 || value > MAX_PRICE_CENTS) {
+      return undefined;
+    }
+    return cursor.s === "precio_asc"
+      ? or(
+          gt(listings.priceCents, value),
+          and(eq(listings.priceCents, value), gt(listings.id, cursor.id)),
+        )
+      : or(
+          lt(listings.priceCents, value),
+          and(eq(listings.priceCents, value), lt(listings.id, cursor.id)),
+        );
   }
-  if (cursor.s === "precio_desc") {
-    const value = Number(cursor.v);
-    return or(
-      lt(listings.priceCents, value),
-      and(eq(listings.priceCents, value), lt(listings.id, cursor.id)),
-    );
-  }
+
   const value = new Date(String(cursor.v));
+  if (Number.isNaN(value.getTime())) return undefined;
   return or(
     lt(listings.createdAt, value),
     and(eq(listings.createdAt, value), lt(listings.id, cursor.id)),
@@ -86,7 +103,7 @@ function baseFilters(query: ListingQuery): SQL[] {
     filters.push(eq(categories.slug, query.categoria));
   }
   if (query.q) {
-    const term = `%${query.q}%`;
+    const term = `%${escapeLike(query.q)}%`;
     const search = or(
       ilike(listings.title, term),
       ilike(listings.description, term),
@@ -94,16 +111,16 @@ function baseFilters(query: ListingQuery): SQL[] {
     if (search) filters.push(search);
   }
   if (query.min !== undefined) {
-    filters.push(gte(listings.priceCents, query.min * 100));
+    filters.push(gte(listings.priceCents, clampPriceCents(query.min * 100)));
   }
   if (query.max !== undefined) {
-    filters.push(lte(listings.priceCents, query.max * 100));
+    filters.push(lte(listings.priceCents, clampPriceCents(query.max * 100)));
   }
   if (query.condicion) {
     filters.push(eq(listings.condition, query.condicion));
   }
   if (query.ubi) {
-    filters.push(ilike(listings.location, `%${query.ubi}%`));
+    filters.push(ilike(listings.location, `%${escapeLike(query.ubi)}%`));
   }
 
   return filters;

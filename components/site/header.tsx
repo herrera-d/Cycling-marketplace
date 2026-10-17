@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bike } from "lucide-react";
 
 import { HeaderAuth } from "@/components/site/header-auth";
+import { HeaderSearch } from "@/components/site/header-search";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -24,7 +25,7 @@ export function Header() {
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
+          <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
             <Link href="/" className="transition-colors hover:text-foreground">
               Inicio
             </Link>
@@ -36,6 +37,8 @@ export function Header() {
             </Link>
           </nav>
         </div>
+
+        <HeaderSearch />
 
         <div className="flex items-center gap-3">
           <Button

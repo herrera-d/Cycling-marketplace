@@ -92,7 +92,7 @@ export function InfiniteFeed({ initialData, query }: InfiniteFeedProps) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
           <ListingCard key={item.id} listing={item} />
         ))}

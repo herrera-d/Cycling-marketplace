@@ -143,10 +143,20 @@ export const listings = pgTable(
     index("listings_status_created_at_idx").on(table.status, table.createdAt),
     // Filtro por categoría.
     index("listings_category_id_status_idx").on(table.categoryId, table.status),
-    // Búsqueda de texto (pg_trgm).
+    // Búsqueda de texto (pg_trgm). El feed busca en título *y* descripción,
+    // así que ambos necesitan índice GIN trigram para poder combinarse.
     index("listings_title_trgm_idx").using(
       "gin",
       sql`${table.title} gin_trgm_ops`,
+    ),
+    index("listings_description_trgm_idx").using(
+      "gin",
+      sql`${table.description} gin_trgm_ops`,
+    ),
+    // Filtro por ubicación (texto libre).
+    index("listings_location_trgm_idx").using(
+      "gin",
+      sql`${table.location} gin_trgm_ops`,
     ),
   ],
 );
