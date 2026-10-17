@@ -1,53 +1,53 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Bike, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Suspense } from "react";
+import { ArrowRight, Bike } from "lucide-react";
+
+import { FeedSection } from "@/components/listings/feed-section";
+import { ListingGridSkeleton } from "@/components/listings/listing-card-skeleton";
 import { Footer } from "@/components/site/footer";
 import { Header } from "@/components/site/header";
-import { ListingCardDemo } from "@/components/site/listing-card-demo";
+import { Button } from "@/components/ui/button";
 
-const categories = [
-  "Bicicletas",
-  "Componentes",
-  "Ruedas",
-  "Ropa",
-  "Calzado",
-  "Cascos",
-  "Accesorios",
-  "Entrenamiento",
-  "Herramientas",
-];
+export const metadata: Metadata = {
+  title: "Marketplace de ciclismo de segunda mano",
+  description:
+    "Compra y vende bicicletas, componentes y equipo de ciclismo de segunda mano. Publicar es gratis y sin comisiones.",
+  openGraph: {
+    title: "BiciMarket — Marketplace de ciclismo",
+    description:
+      "Bicicletas, componentes y equipo de ciclismo de segunda mano.",
+    type: "website",
+  },
+};
 
-const demos = [
-  {
-    title: "Trek Madone SLR 9 2023, talla 56",
-    price: "€3.400",
-    condition: "Como nuevo",
-    emoji: "🚴",
-  },
-  {
-    title: "Grupo Campagnolo Super Record 12v",
-    price: "€1.150",
-    condition: "Buen estado",
-    emoji: "⚙️",
-  },
-  {
-    title: "Casco Aeroad Giro AeroHead MIPS, M",
-    price: "€120",
-    condition: "Nuevo",
-    emoji: "⛑️",
-  },
-];
+/** Fallback del feed mientras el servidor resuelve la primera página. */
+function FeedFallback() {
+  return (
+    <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
+      <div className="hidden lg:block">
+        <div className="sticky top-24 h-[420px] rounded-2xl border bg-card" />
+      </div>
+      <div className="min-w-0">
+        <div className="h-9 w-44 animate-pulse rounded-lg bg-muted" />
+        <div className="mt-6">
+          <ListingGridSkeleton count={8} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-export default function HomePage() {
+export default function HomePage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <Header />
 
-      <main>
+      <main className="flex-1">
         {/* Hero */}
-        <section className="mx-auto w-full max-w-7xl px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pt-20">
+        <section className="mx-auto w-full max-w-7xl px-4 pb-12 pt-14 sm:px-6 lg:px-8 lg:pt-20">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm font-medium text-muted-foreground shadow-sm">
+            <span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-sm font-medium text-muted-foreground shadow-xs">
               <Bike className="size-4 text-primary" aria-hidden="true" />
               La comunidad ciclista compra y vende aquí
             </span>
@@ -71,7 +71,7 @@ export default function HomePage() {
               </Button>
               <Button
                 nativeButton={false}
-                render={<Link href="/#anuncios" />}
+                render={<Link href="#anuncios" />}
                 size="lg"
                 variant="outline"
                 className="rounded-full px-8"
@@ -82,57 +82,15 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Búsqueda / categorías */}
+        {/* Feed */}
         <section
-          id="categorias"
-          className="border-y bg-card/50 py-12"
-          aria-label="Categorías"
+          id="anuncios"
+          aria-label="Anuncios"
+          className="mx-auto w-full max-w-7xl scroll-mt-20 px-4 pb-20 sm:px-6 lg:px-8"
         >
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight">
-                  Explora por categoría
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Bollilos, cuadros, rodillos y más
-                </p>
-              </div>
-              <span className="hidden items-center gap-2 text-sm text-muted-foreground sm:inline-flex">
-                <Search className="size-4" aria-hidden="true" />
-                Los filtros llegarán en la Fase 3
-              </span>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              {categories.map((category) => (
-                <span
-                  key={category}
-                  className="cursor-default rounded-full border bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:border-primary/40 hover:text-primary"
-                >
-                  {category}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Demo de anuncios (design system showcase) */}
-        <section id="anuncios" className="py-14">
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold tracking-tight">
-                Anuncios destacados
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Vista previa · feed real en la Fase 3
-              </p>
-            </div>
-            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {demos.map((demo) => (
-                <ListingCardDemo key={demo.title} {...demo} />
-              ))}
-            </div>
-          </div>
+          <Suspense fallback={<FeedFallback />}>
+            <FeedSection searchParams={searchParams} />
+          </Suspense>
         </section>
       </main>
 
