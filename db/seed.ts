@@ -95,11 +95,39 @@ async function main() {
     .values(listingValues)
     .onConflictDoNothing({ target: listings.id });
 
-  const imageValues = DEMO_LISTINGS.map((listing) => ({
-    listingId: listing.id,
-    url: listing.imageUrl,
-    position: 0,
-  }));
+  // Imágenes de la galería (PLAN §5.4). La posición 0 es la del propio anuncio
+  // (la que usa el feed) y se completan hasta 4 con imágenes **distintas**:
+  // primero las de su categoría y después el resto del catálogo demo. Los datos
+  // de demostración reutilizan fotos, así que sin deduplicar la galería
+  // mostraría la misma imagen repetida.
+  const distinctByCategory = new Map<string, string[]>();
+  for (const listing of DEMO_LISTINGS) {
+    const set = distinctByCategory.get(listing.categorySlug) ?? [];
+    if (!set.includes(listing.imageUrl)) set.push(listing.imageUrl);
+    distinctByCategory.set(listing.categorySlug, set);
+  }
+  const distinctAll = [...new Set(DEMO_LISTINGS.map((l) => l.imageUrl))];
+
+  const imageValues = DEMO_LISTINGS.flatMap((listing, index) => {
+    const sameCategory = (distinctByCategory.get(listing.categorySlug) ?? [])
+      .filter((url) => url !== listing.imageUrl);
+    const restOfCatalog = distinctAll.filter(
+      (url) => url !== listing.imageUrl && !sameCategory.includes(url),
+    );
+
+    // Rotación determinista para que cada anuncio tenga una galería variada.
+    const extras = [...sameCategory, ...restOfCatalog];
+    const picked = [listing.imageUrl];
+    for (let i = 0; picked.length < 4 && i < extras.length; i++) {
+      picked.push(extras[(index + i) % extras.length]);
+    }
+
+    return [...new Set(picked)].map((url, position) => ({
+      listingId: listing.id,
+      url,
+      position,
+    }));
+  });
 
   // Las imágenes no tienen clave natural: se reemplazan para mantener el
   // seed idempotente. `inArray` parametriza los IDs (nada de SQL crudo).

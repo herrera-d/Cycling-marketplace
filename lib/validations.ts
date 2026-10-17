@@ -79,3 +79,11 @@ export function parseListingQuery(
   const data = parsed.success ? parsed.data : listingQuerySchema.parse({});
   return { ...data, cursor: undefined };
 }
+
+/**
+ * Valida el `id` de un anuncio antes de tocar la base de datos.
+ *
+ * Postgres lanza un error si se le pasa un uuid malformado, así que un id
+ * inválido debe resolverse como "no encontrado" (404), no como error 500.
+ */
+export const listingIdSchema = z.string().uuid();

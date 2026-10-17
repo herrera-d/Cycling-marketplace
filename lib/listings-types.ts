@@ -1,4 +1,4 @@
-import type { Condition } from "@/db/schema";
+import type { Condition, Status } from "@/db/schema";
 
 /**
  * Tipos compartidos entre servidor y cliente.
@@ -33,4 +33,34 @@ export type CategoryOption = {
   name: string;
   slug: string;
   icon: string;
+};
+
+/** Datos públicos del vendedor que se muestran en el detalle. */
+export type ListingSeller = {
+  id: string;
+  name: string | null;
+  image: string | null;
+  /** ISO. Antigüedad en la plataforma. */
+  memberSince: string;
+};
+
+/** Anuncio completo para la página de detalle (PLAN §5.4). */
+export type ListingDetail = {
+  id: string;
+  title: string;
+  description: string;
+  priceCents: number;
+  currency: string;
+  condition: Condition;
+  brand: string | null;
+  size: string | null;
+  location: string | null;
+  status: Status;
+  categorySlug: string;
+  categoryName: string;
+  categoryIcon: string;
+  /** URLs en orden (`position` ascendente). Puede venir vacío. */
+  images: string[];
+  seller: ListingSeller;
+  createdAt: string;
 };

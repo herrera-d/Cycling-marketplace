@@ -10,13 +10,19 @@ import {
   inArray,
   lt,
   lte,
+  ne,
   or,
   type SQL,
 } from "drizzle-orm";
 
 import { getDb } from "@/db";
-import { categories, listingImages, listings } from "@/db/schema";
-import type { ListingsPage } from "@/lib/listings-types";
+import {
+  categories,
+  listingImages,
+  listings,
+  users,
+} from "@/db/schema";
+import type { ListingDetail, ListingsPage } from "@/lib/listings-types";
 import {
   cursorSchema,
   type DecodedCursor,
@@ -230,5 +236,78 @@ export async function getListingsPage(
     })),
     nextCursor,
     total: totalRows[0]?.value ?? 0,
+  };
+}
+
+/**
+ * Devuelve un anuncio completo para la página de detalle (PLAN §5.4).
+ *
+ * Solo se exponen anuncios publicados (`active`/`sold`): los borradores se
+ * reservan para su dueño en la Fase 7. Devuelve `null` si no existe o no es
+ * público, para que la página pueda responder 404.
+ */
+export async function getListingById(
+  id: string,
+): Promise<ListingDetail | null> {
+  const db = getDb();
+
+  const rows = await db
+    .select({
+      id: listings.id,
+      title: listings.title,
+      description: listings.description,
+      priceCents: listings.priceCents,
+      currency: listings.currency,
+      condition: listings.condition,
+      brand: listings.brand,
+      size: listings.size,
+      location: listings.location,
+      status: listings.status,
+      createdAt: listings.createdAt,
+      categorySlug: categories.slug,
+      categoryName: categories.name,
+      categoryIcon: categories.icon,
+      sellerId: users.id,
+      sellerName: users.name,
+      sellerImage: users.image,
+      sellerSince: users.createdAt,
+    })
+    .from(listings)
+    .innerJoin(categories, eq(listings.categoryId, categories.id))
+    .innerJoin(users, eq(listings.sellerId, users.id))
+    .where(and(eq(listings.id, id), ne(listings.status, "draft")))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+
+  const images = await db
+    .select({ url: listingImages.url })
+    .from(listingImages)
+    .where(eq(listingImages.listingId, id))
+    .orderBy(asc(listingImages.position));
+
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    priceCents: row.priceCents,
+    currency: row.currency,
+    condition: row.condition,
+    brand: row.brand,
+    size: row.size,
+    location: row.location,
+    status: row.status,
+    categorySlug: row.categorySlug,
+    categoryName: row.categoryName,
+    categoryIcon: row.categoryIcon,
+    images: images.map((image) => image.url),
+    seller: {
+      id: row.sellerId,
+      name: row.sellerName,
+      image: row.sellerImage,
+      memberSince: row.sellerSince.toISOString(),
+    },
+    createdAt: row.createdAt.toISOString(),
   };
 }
