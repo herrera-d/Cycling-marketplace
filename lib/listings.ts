@@ -79,6 +79,10 @@ function cursorCondition(cursor: DecodedCursor): SQL | undefined {
 
   const value = new Date(String(cursor.v));
   if (Number.isNaN(value.getTime())) return undefined;
+  // `timestamptz` solo admite años 0001–9999: fuera de ese rango Postgres
+  // responde "time zone displacement out of range" (500). Se ignora el cursor.
+  const year = value.getUTCFullYear();
+  if (year < 1 || year > 9999) return undefined;
   return or(
     lt(listings.createdAt, value),
     and(eq(listings.createdAt, value), lt(listings.id, cursor.id)),

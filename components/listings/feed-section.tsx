@@ -5,7 +5,7 @@ import { Filters } from "@/components/listings/filters";
 import { InfiniteFeed } from "@/components/listings/infinite-feed";
 import { getCategories } from "@/lib/categories";
 import { getListingsPage } from "@/lib/listings";
-import { listingQuerySchema, parseListingQuery } from "@/lib/validations";
+import { parseListingQuery } from "@/lib/validations";
 
 /**
  * Sección del feed (PLAN §5.2).
@@ -27,12 +27,16 @@ export async function FeedSection({
     flat[key] = Array.isArray(value) ? value[0] : value;
   }
 
-  const parsed = listingQuerySchema.safeParse(flat);
+  // `parseListingQuery` normaliza los filtros y **descarta el `cursor`**: la
+  // primera página la sirve el servidor y el cliente continúa desde ahí con
+  // su propia clave de consulta. Aceptar el `cursor` de la URL haría que el
+  // HTML inicial mostrara una página de continuación inconsistente con el
+  // cliente (y expondría el parseo del cursor a entradas manipuladas).
   const query = parseListingQuery(flat);
 
   const [categories, page] = await Promise.all([
     getCategories(),
-    getListingsPage(parsed.success ? parsed.data : query),
+    getListingsPage(query),
   ]);
 
   const activeCount = [
