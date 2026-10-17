@@ -14,13 +14,23 @@ export const metadata = {
     "Entra con tu cuenta de Google para publicar y guardar artículos en BiciMarket.",
 };
 
-/** Solo acepta rutas internas (evita redirecciones abiertas). */
+/**
+ * Solo acepta rutas internas (evita redirecciones abiertas).
+ *
+ * Se resuelve contra un origen de confianza "dummy": si el valor apunta a otro
+ * origen (incl. `//host`, `/\host` o `https://…`) se descarta. Esto cubre los
+ * bypass con barra invertida que un simple `startsWith("//")` no detecta.
+ */
 function safeCallbackUrl(value: string | string[] | undefined): string {
   const raw = Array.isArray(value) ? value[0] : value;
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+  if (!raw) return "/";
+  try {
+    const url = new URL(raw, "http://internal.invalid");
+    if (url.origin !== "http://internal.invalid") return "/";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
     return "/";
   }
-  return raw;
 }
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {

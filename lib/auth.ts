@@ -26,8 +26,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verificationTokensTable: verificationTokens,
   }),
   session: { strategy: "jwt" },
-  // Necesario para confiar en el host en local y tras proxies (Vercel).
-  trustHost: true,
+  // `trustHost` se activa automáticamente cuando existe `AUTH_URL` (o en
+  // Vercel/CF Pages). En producción es obligatorio definir AUTH_URL con el
+  // dominio https final para que Auth.js no derive el host de la petición.
   pages: { signIn: "/login" },
   providers: [
     Google({
