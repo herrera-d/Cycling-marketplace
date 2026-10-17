@@ -34,6 +34,7 @@ export function Header() {
         </nav>
 
         <Button
+          nativeButton={false}
           render={<Link href="/sell" />}
           className="rounded-full shadow-sm"
         >

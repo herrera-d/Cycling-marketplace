@@ -61,6 +61,7 @@ export default function HomePage() {
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button
+                nativeButton={false}
                 render={<Link href="/sell" />}
                 size="lg"
                 className="rounded-full px-8 shadow-sm"
@@ -69,6 +70,7 @@ export default function HomePage() {
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
               <Button
+                nativeButton={false}
                 render={<Link href="/#anuncios" />}
                 size="lg"
                 variant="outline"
