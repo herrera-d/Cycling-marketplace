@@ -41,6 +41,63 @@ export const users = pgTable("users", {
     .defaultNow(),
 });
 
+/**
+ * Tablas requeridas por el adaptador de Drizzle de Auth.js (Fase 2).
+ *
+ * Los nombres de las *propiedades* deben coincidir exactamente con lo que
+ * espera `@auth/drizzle-adapter` (`userId`, `providerAccountId`,
+ * `refresh_token`, ...); los nombres de columna en Postgres se mantienen en
+ * snake_case por convención del proyecto.
+ */
+export const accounts = pgTable(
+  "accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (account) => [
+    primaryKey({ columns: [account.provider, account.providerAccountId] }),
+    index("accounts_user_id_idx").on(account.userId),
+  ],
+);
+
+export const sessions = pgTable(
+  "sessions",
+  {
+    sessionToken: text("session_token").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expires: timestamp("expires", { withTimezone: true, mode: "date" })
+      .notNull(),
+  },
+  (table) => [index("sessions_user_id_idx").on(table.userId)],
+);
+
+export const verificationTokens = pgTable(
+  "verification_tokens",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { withTimezone: true, mode: "date" })
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.identifier, table.token] }),
+  ],
+);
+
 export const categories = pgTable(
   "categories",
   {
@@ -128,6 +185,9 @@ export const favorites = pgTable(
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type Account = typeof accounts.$inferSelect;
+export type Session = typeof sessions.$inferSelect;
+export type VerificationToken = typeof verificationTokens.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Listing = typeof listings.$inferSelect;
