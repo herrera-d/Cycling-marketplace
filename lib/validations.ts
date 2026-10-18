@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MAX_LISTING_IMAGES } from "@/lib/image-constraints";
+
 /**
  * Validación de los parámetros de `GET /api/listings`.
  *
@@ -87,3 +89,64 @@ export function parseListingQuery(
  * inválido debe resolverse como "no encontrado" (404), no como error 500.
  */
 export const listingIdSchema = z.string().uuid();
+
+/* -------------------------------------------------------------------------- */
+/* Publicar un anuncio (Fase 5)                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Monedas admitidas (espejo de `lib/format.ts`; ver `CURRENCIES`). */
+export const CURRENCY_VALUES = ["ARS", "USD", "EUR", "MXN", "BRL"] as const;
+
+/**
+ * Precio máximo en unidades mayores.
+ *
+ * `price_cents` es `int4` (máx. 2 147 483 647), así que el precio en unidades
+ * mayores no puede pasar de ~21,47 M. Lo dejamos en 20 M por margen de redondeo.
+ */
+export const MAX_PRICE_MAJOR = 20_000_000;
+
+/** Texto opcional: campo vacío (`""`) se normaliza a `null` al persistir. */
+const optionalFormText = (max: number) =>
+  z.string().trim().max(max, `No puede superar los ${max} caracteres.`).optional();
+
+/**
+ * Esquema del formulario de publicación.
+ *
+ * Se usa **en el cliente** (react-hook-form + zodResolver) y **en el servidor**
+ * (`POST /api/listings`): una sola fuente de verdad para las reglas.
+ *
+ * `images` son URLs ya subidas a Supabase Storage; el servidor además verifica
+ * que pertenezcan a nuestro bucket.
+ */
+export const listingFormSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(8, "El título debe tener al menos 8 caracteres.")
+    .max(120, "El título no puede superar los 120 caracteres."),
+  description: z
+    .string()
+    .trim()
+    .min(20, "Describí tu artículo con al menos 20 caracteres.")
+    .max(4000, "La descripción no puede superar los 4000 caracteres."),
+  categorySlug: z.string().trim().min(1, "Elegí una categoría.").max(60),
+  condition: z.enum(CONDITION_VALUES),
+  brand: optionalFormText(60),
+  size: optionalFormText(40),
+  price: z
+    .number({ error: "Ingresá un precio válido." })
+    .positive("El precio debe ser mayor a 0.")
+    .max(MAX_PRICE_MAJOR, "El precio es demasiado alto."),
+  currency: z.enum(CURRENCY_VALUES),
+  location: z
+    .string()
+    .trim()
+    .min(2, "Indicá dónde está el artículo.")
+    .max(80, "La ubicación no puede superar los 80 caracteres."),
+  images: z
+    .array(z.string().url())
+    .min(1, "Subí al menos una foto.")
+    .max(MAX_LISTING_IMAGES, `Podés subir hasta ${MAX_LISTING_IMAGES} fotos.`),
+});
+
+export type ListingFormValues = z.infer<typeof listingFormSchema>;

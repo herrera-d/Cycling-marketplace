@@ -28,6 +28,7 @@ import type { ListingDetail, ListingsPage } from "@/lib/listings-types";
 import {
   cursorSchema,
   type DecodedCursor,
+  type ListingFormValues,
   type ListingQuery,
 } from "@/lib/validations";
 
@@ -42,6 +43,12 @@ function escapeLike(value: string): string {
 /** Evita el desbordamiento de `int4` al pasar de unidades mayores a centavos. */
 function clampPriceCents(value: number): number {
   return Math.min(Math.max(value, 0), MAX_PRICE_CENTS);
+}
+
+/** Texto opcional del formulario: `""`/espacios se guardan como `null`. */
+function toNullableText(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 /**
@@ -316,3 +323,71 @@ export const getListingById = cache(
     };
   },
 );
+
+/**
+ * Crea un anuncio publicado (Fase 5).
+ *
+ * El precio llega en unidades mayores y se guarda en centavos. El anuncio nace
+ * con estado `active` para que aparezca de inmediato en el feed.
+ *
+ * No usamos transacción (el driver HTTP de Neon es stateless): insertamos el
+ * anuncio, y si falla la inserción de las imágenes lo borramos como
+ * compensación para no dejar anuncios sin fotos.
+ */
+export async function createListing(
+  input: ListingFormValues,
+  sellerId: string,
+): Promise<{ id: string }> {
+  const db = getDb();
+
+  const categoryRows = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.slug, input.categorySlug))
+    .limit(1);
+
+  const categoryId = categoryRows[0]?.id;
+  if (!categoryId) {
+    throw new Error(`Categoría inexistente: ${input.categorySlug}`);
+  }
+
+  const priceCents = clampPriceCents(Math.round(input.price * 100));
+
+  const inserted = await db
+    .insert(listings)
+    .values({
+      title: input.title,
+      description: input.description,
+      priceCents,
+      currency: input.currency,
+      categoryId,
+      condition: input.condition,
+      brand: toNullableText(input.brand),
+      size: toNullableText(input.size),
+      location: input.location,
+      status: "active",
+      sellerId,
+    })
+    .returning({ id: listings.id });
+
+  const created = inserted[0];
+  if (!created) {
+    throw new Error("No se pudo crear el anuncio");
+  }
+
+  try {
+    await db.insert(listingImages).values(
+      input.images.map((url, position) => ({
+        listingId: created.id,
+        url,
+        position,
+      })),
+    );
+  } catch (error) {
+    // Compensación: sin imágenes el anuncio quedaría inservible en el feed.
+    await db.delete(listings).where(eq(listings.id, created.id));
+    throw error;
+  }
+
+  return { id: created.id };
+}

@@ -2,32 +2,10 @@ import { NextResponse } from "next/server";
 
 import { getOptionalUser } from "@/lib/dal";
 import { addFavorite, isPublicListing, removeFavorite } from "@/lib/favorites";
+import { isSameOrigin } from "@/lib/http";
 import { listingIdSchema } from "@/lib/validations";
 
 type Context = RouteContext<"/api/favorites/[listingId]">;
-
-/**
- * Defensa en profundidad contra CSRF.
- *
- * La protección primaria es la cookie de sesión de Auth.js (`HttpOnly` +
- * `SameSite=Lax`), que no viaja en peticiones cross-site. Aun así, si el
- * navegador envía `Origin`, exigimos que coincida con el `Host` de la petición.
- * Si no hay `Origin` (clientes no-navegador) no bloqueamos: la sesión sigue
- * siendo obligatoria.
- */
-function isSameOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  const host = request.headers.get("host");
-  if (!host) return false;
-
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Favoritos de un anuncio (PLAN §5.6).
