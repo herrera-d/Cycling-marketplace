@@ -218,9 +218,10 @@ export function UploadImages({ value, onChange, disabled }: UploadImagesProps) {
                 <Image
                   src={url}
                   alt={`Foto ${index + 1} del anuncio`}
-                  fill
+                  width={600}
+                  height={600}
                   sizes="(min-width: 640px) 25vw, 50vw"
-                  className="object-cover"
+                  className="absolute inset-0 size-full object-cover"
                 />
               </div>
 

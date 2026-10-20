@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const limited = rateLimit(`listing:create:${user.id}`, {
+  const limited = await rateLimit(`listing:create:${user.id}`, {
     limit: CREATE_LIMIT,
     windowMs: CREATE_WINDOW_MS,
   });

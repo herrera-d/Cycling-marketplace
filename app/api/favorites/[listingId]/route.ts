@@ -3,7 +3,12 @@ import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/dal";
 import { addFavorite, isPublicListing, removeFavorite } from "@/lib/favorites";
 import { isSameOrigin } from "@/lib/http";
+import { rateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { listingIdSchema } from "@/lib/validations";
+
+/** Toggles de favoritos por usuario (evita martillar la API desde un script). */
+const FAVORITE_LIMIT = 60;
+const FAVORITE_WINDOW_MS = 60 * 1000;
 
 type Context = RouteContext<"/api/favorites/[listingId]">;
 
@@ -38,6 +43,17 @@ async function toggle(
   const user = await getOptionalUser();
   if (!user?.id) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+
+  const limited = await rateLimit(`favorites:${user.id}`, {
+    limit: FAVORITE_LIMIT,
+    windowMs: FAVORITE_WINDOW_MS,
+  });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "Demasiadas operaciones seguidas. Probá en un minuto." },
+      { status: 429, headers: rateLimitHeaders(limited) },
+    );
   }
 
   // Solo se puede marcar un anuncio que exista y sea público.

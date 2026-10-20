@@ -193,6 +193,27 @@ export const favorites = pgTable(
   ],
 );
 
+/**
+ * Contadores de rate limiting (PLAN §9.1 Fase 8).
+ *
+ * El límite vive en la misma BD que la app: es estado **distribuido** por
+ * definición, así funciona igual en local, en staging y en las múltiples
+ * instancias serverless de Vercel, sin sumar un servicio extra. Cada clave es
+ * una fila con su contador y el inicio de la ventana; las filas vencidas se
+ * podan de forma oportunista.
+ */
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: text("key").primaryKey(),
+    count: integer("count").notNull().default(0),
+    windowStartedAt: timestamp("window_started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("rate_limits_window_started_at_idx").on(table.windowStartedAt)],
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Account = typeof accounts.$inferSelect;

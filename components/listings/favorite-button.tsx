@@ -14,7 +14,7 @@ import { cn } from "cn";
  * - Con sesión: alterna el favorito contra `/api/favorites/:id` de forma
  *   optimista, revirtiendo si la petición falla.
  *
- * En la Fase 6 se reutiliza en las tarjetas del feed y en `/favoritos`.
+ * La reutilizan las tarjetas del feed y la página `/favoritos`.
  */
 export function FavoriteButton({
   listingId,
@@ -53,6 +53,10 @@ export function FavoriteButton({
 
         const data = (await response.json()) as { favorite: boolean };
         setFavorite(data.favorite);
+
+        // En `/favoritos` la grilla viene del servidor: sin este refresh el
+        // anuncio quedaría visible (con el corazón vacío) hasta recargar.
+        if (pathname === "/favoritos") router.refresh();
       } catch {
         setFavorite(!next); // revertir
         setError(true);

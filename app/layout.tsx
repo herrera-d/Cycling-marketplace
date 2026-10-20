@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 
@@ -15,12 +17,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.AUTH_URL ||
+      "http://localhost:3000",
+  ),
   title: {
     default: "BiciMarket — Marketplace de ciclismo",
     template: "%s · BiciMarket",
   },
   description:
     "Compra y vende bicicletas, componentes y equipo de ciclismo de segunda mano.",
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    siteName: "BiciMarket",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -31,6 +50,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <Providers>{children}</Providers>
+        {/* Analítica y Core Web Vitals de Vercel (PLAN §9.1 Fase 9): ambos
+            servicios son gratuitos en el plan Hobby y no envían datos si no se
+            habilitan en el proyecto. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

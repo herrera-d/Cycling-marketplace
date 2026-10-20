@@ -1,17 +1,28 @@
+import { sql } from "drizzle-orm";
+
+import { getDb } from "@/db";
+import { rateLimits } from "@/db/schema";
+
 /**
- * Limitador de tasa en memoria (ventana deslizante).
+ * Limitador de tasa por ventana, con el contador en la propia base de datos.
  *
- * La Fase 5 necesita frenar el abuso en la creación de anuncios y en la subida
- * de imágenes (PLAN §9.1). Esta implementación vive en el proceso: es suficiente
- * en desarrollo y en una única instancia, pero **no** es distribuida. La Fase 8
- * la reemplaza por Upstash Redis (ya previsto en el stack), que sobrevive a los
- * despliegues serverless y comparte estado entre instancias.
+ * PLAN §9.1 (Fase 8) y §11: los límites tienen que valer en **todas** las
+ * instancias serverless, no solo en el proceso que atiende la petición. Usar
+ * Neon evita sumar un servicio externo (el stack es 100 % gratuito) y vale para
+ * local, staging y producción con el mismo código.
+ *
+ * Estrategia: ventana fija por clave. El `upsert` atómico incrementa el
+ * contador y, si la ventana venció, la reinicia en la misma sentencia — así dos
+ * instancias concurrentes nunca leen un contador viejo.
+ *
+ * Si la consulta falla se **permite** la petición (fail-open): un limitador
+ * roto no debe tumbar publicaciones ni subidas.
  */
 
-const buckets = new Map<string, number[]>();
-
-/** Tope de claves para que el `Map` no crezca sin control. */
-const MAX_KEYS = 5_000;
+/** Ventana de retención de claves podadas. */
+const PRUNE_RETENTION_DAYS = 1;
+/** Probabilidad de podar claves vencidas en cada ventana nueva. */
+const PRUNE_PROBABILITY = 0.02;
 
 export type RateLimitResult = {
   ok: boolean;
@@ -21,43 +32,62 @@ export type RateLimitResult = {
   retryAfterMs: number;
 };
 
-export function rateLimit(
+export async function rateLimit(
   key: string,
   { limit, windowMs }: { limit: number; windowMs: number },
-): RateLimitResult {
-  const now = Date.now();
-  const windowStart = now - windowMs;
+): Promise<RateLimitResult> {
+  try {
+    const db = getDb();
+    const expired = sql`${rateLimits.windowStartedAt} <= now() - make_interval(secs => ${windowMs}::double precision / 1000.0)`;
 
-  const hits = (buckets.get(key) ?? []).filter((time) => time > windowStart);
+    const [row] = await db
+      .insert(rateLimits)
+      .values({ key, count: 1 })
+      .onConflictDoUpdate({
+        target: rateLimits.key,
+        set: {
+          count: sql`case when ${expired} then 1 else ${rateLimits.count} + 1 end`,
+          windowStartedAt: sql`case when ${expired} then now() else ${rateLimits.windowStartedAt} end`,
+        },
+      })
+      .returning({
+        count: rateLimits.count,
+        windowStartedAt: rateLimits.windowStartedAt,
+      });
 
-  if (hits.length >= limit) {
-    buckets.set(key, hits);
-    const oldest = hits[0] ?? now;
-    return {
-      ok: false,
-      remaining: 0,
-      retryAfterMs: Math.max(oldest + windowMs - now, 0),
-    };
-  }
+    const retryAfterMs = Math.max(
+      row.windowStartedAt.getTime() + windowMs - Date.now(),
+      0,
+    );
 
-  hits.push(now);
-  buckets.set(key, hits);
+    if (row.count > limit) {
+      return { ok: false, remaining: 0, retryAfterMs };
+    }
 
-  // Poda oportunista: evita que claves inactivas se acumulen para siempre.
-  if (buckets.size > MAX_KEYS) {
-    for (const [bucketKey, times] of buckets) {
-      if (times.every((time) => time <= windowStart)) {
-        buckets.delete(bucketKey);
+    // Poda oportunista: las claves de ventanas viejas no se usan nunca más.
+    if (row.count === 1 && Math.random() < PRUNE_PROBABILITY) {
+      try {
+        await db
+          .delete(rateLimits)
+          .where(
+            sql`${rateLimits.windowStartedAt} < now() - make_interval(days => ${PRUNE_RETENTION_DAYS}::int)`,
+          );
+      } catch {
+        // La poda es secundario: no condiciona la respuesta.
       }
     }
-  }
 
-  return { ok: true, remaining: limit - hits.length, retryAfterMs: 0 };
+    return { ok: true, remaining: limit - row.count, retryAfterMs: 0 };
+  } catch (error) {
+    console.error(`rateLimit(${key}) no respondió; se permite la petición`, error);
+    return { ok: true, remaining: limit, retryAfterMs: 0 };
+  }
 }
 
 /** Cabeceras estándar para una respuesta 429. */
 export function rateLimitHeaders(result: RateLimitResult): HeadersInit {
   return {
     "Retry-After": String(Math.max(Math.ceil(result.retryAfterMs / 1000), 1)),
+    "X-RateLimit-Remaining": String(result.remaining),
   };
 }

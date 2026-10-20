@@ -24,10 +24,12 @@ const u = (id: string) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70`;
 
 /**
- * Anuncios de demostración para desarrollar el feed (Fase 3).
+ * Anuncios de demostración para desarrollar el feed (PLAN §5.2).
  *
- * Se eliminan en producción con `npm run db:seed:clear-demo`. Las imágenes son
- * de Unsplash (uso libre) y se sustituirán por Supabase Storage en la Fase 5.
+ * Nunca existen en producción: `db/seed.ts` se niega a sembrar demo con
+ * `APP_ENV=production` y `npm run db:clean:prod` limpia cualquier resto. Las
+ * imágenes apuntan a Unsplash (uso libre): así no hay binarios en el repo y el
+ * dominio ya está habilitado en `next.config.ts`.
  */
 export const DEMO_LISTINGS: DemoListing[] = [
   {

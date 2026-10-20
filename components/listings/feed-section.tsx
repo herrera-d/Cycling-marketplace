@@ -6,6 +6,8 @@ import { InfiniteFeed } from "@/components/listings/infinite-feed";
 import { getCategories } from "@/lib/categories";
 import { getListingsPage } from "@/lib/listings";
 import { parseListingQuery } from "@/lib/validations";
+import { getOptionalUser } from "@/lib/dal";
+import { getUserFavoriteIds } from "@/lib/favorites";
 
 /**
  * Sección del feed (PLAN §5.2).
@@ -34,9 +36,11 @@ export async function FeedSection({
   // cliente (y expondría el parseo del cursor a entradas manipuladas).
   const query = parseListingQuery(flat);
 
-  const [categories, page] = await Promise.all([
+  const user = await getOptionalUser();
+  const [categories, page, favorites] = await Promise.all([
     getCategories(),
     getListingsPage(query),
+    user?.id ? getUserFavoriteIds(user.id) : Promise.resolve(new Set<string>()),
   ]);
 
   const activeCount = [
@@ -55,7 +59,12 @@ export async function FeedSection({
       <div className="min-w-0">
         <FeedToolbar total={page.total} />
         <div className="mt-6">
-          <InfiniteFeed initialData={page} query={query} />
+          <InfiniteFeed
+            initialData={page}
+            query={query}
+            favorites={favorites}
+            isAuthenticated={Boolean(user?.id)}
+          />
         </div>
       </div>
     </div>

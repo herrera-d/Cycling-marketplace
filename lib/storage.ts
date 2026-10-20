@@ -125,3 +125,35 @@ export function isOwnedListingImageUrl(url: string): boolean {
     return false;
   }
 }
+
+function extractListingImagePath(publicUrl: string): string | null {
+  try {
+    const url = new URL(publicUrl);
+    const parts = url.pathname.split("/");
+    const idx = parts.indexOf(LISTING_IMAGES_BUCKET);
+    if (idx === -1) return null;
+    return parts.slice(idx + 1).join("/");
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteListingImagesByUrls(urls: string[]): Promise<void> {
+  const list = urls.filter((u) => isOwnedListingImageUrl(u));
+  if (list.length === 0) return;
+  if (!isStorageConfigured()) return;
+
+  const supabase = getStorageClient();
+  const paths = list
+    .map((u) => extractListingImagePath(u))
+    .filter((p): p is string => Boolean(p));
+
+  if (paths.length === 0) return;
+
+  const { error } = await supabase.storage
+    .from(LISTING_IMAGES_BUCKET)
+    .remove(paths);
+  if (error) {
+    console.error("[storage] deleteListingImagesByUrls error:", error);
+  }
+}

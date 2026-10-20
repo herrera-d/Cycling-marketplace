@@ -1,15 +1,17 @@
-import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-// Carga .env.local (Next) y luego .env como fallback.
-config({ path: [".env.local", ".env"] });
+import { loadEnvFiles, requireDatabaseUrl } from "./db/env";
+
+// Carga el entorno según APP_ENV (development | staging | production):
+// `.env.<APP_ENV>.local` → `.env.local` → `.env`. En producción no toca archivos.
+loadEnvFiles();
 
 export default defineConfig({
   schema: "./db/schema.ts",
   out: "./db/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: requireDatabaseUrl(),
   },
   strict: true,
   verbose: true,

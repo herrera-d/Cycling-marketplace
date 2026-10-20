@@ -6,8 +6,26 @@
  * (`upload-images.tsx`) sin arrastrar `@supabase/supabase-js` al bundle.
  */
 
-/** Bucket público de Supabase Storage donde viven las fotos de los anuncios. */
-export const LISTING_IMAGES_BUCKET = "listings";
+/**
+ * Bucket de Supabase Storage donde viven las fotos de un anuncio.
+ *
+ * Cada ambiente aísla sus imágenes en su propio bucket (misma idea que los
+ * branches de Neon, PLAN §13.1):
+ *
+ *   development → `listings` (default)
+ *   staging     → `listings-staging`
+ *   production  → `listings-prod`
+ *
+ * Se lee con el prefijo `NEXT_PUBLIC_` porque este módulo se importa tanto
+ * desde el servidor (`lib/storage.ts`) como desde el cliente
+ * (`upload-images.tsx`), y Next solo inyecta en el bundle las variables
+ * públicas. El nombre va **incrustado en el build**, así que cada entorno
+ * (Vercel Preview/Production, `next dev` local) apunta a su bucket.
+ *
+ * Si la variable no está definida cae en `listings` (comportamiento previo).
+ */
+export const LISTING_IMAGES_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_BUCKET ?? "listings";
 
 /** Máximo de imágenes por anuncio. */
 export const MAX_LISTING_IMAGES = 8;

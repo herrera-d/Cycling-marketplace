@@ -61,7 +61,9 @@
   --card-foreground: oklch(0.17 0.01 85);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.17 0.01 85);
-  --primary: oklch(0.55 0.18 150);
+  /* 0.55 → 0.52: el verde original daba 4.18:1 con texto blanco y 4.30:1
+     como texto sobre el fondo, por debajo del mínimo AA de 4.5:1 (WCAG 1.4.3). */
+  --primary: oklch(0.52 0.18 150);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.965 0.004 85);
   --secondary-foreground: oklch(0.205 0.01 85);
@@ -70,8 +72,11 @@
   --accent: oklch(0.94 0.02 150);
   --accent-foreground: oklch(0.35 0.09 150);
   --destructive: oklch(0.577 0.245 27.325);
+  /* Borde de campos: 0.90 daba 1.33:1 sobre el fondo. 0.65 llega a 3.15:1,
+     mínimo de información no textual (WCAG 1.4.11). `--border` sigue claro
+     porque es decorativo (tarjetas, separadores). */
+  --input: oklch(0.65 0.004 85);
   --border: oklch(0.9 0.004 85);
-  --input: oklch(0.9 0.004 85);
   --ring: oklch(0.62 0.17 150);
   --chart-1: oklch(0.62 0.17 150);
   --chart-2: oklch(0.52 0.01 85);
@@ -81,7 +86,7 @@
   --radius: 1rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.17 0.01 85);
-  --sidebar-primary: oklch(0.55 0.18 150);
+  --sidebar-primary: oklch(0.52 0.18 150);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.94 0.02 150);
   --sidebar-accent-foreground: oklch(0.35 0.09 150);
@@ -106,7 +111,9 @@
   --accent-foreground: oklch(0.85 0.1 150);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  /* Mismo criterio que en claro: borde de campos opaco con ≥3:1 (WCAG 1.4.11);
+     el `--border` con alfa 10% queda solo para elementos decorativos. */
+  --input: oklch(0.52 0.004 85);
   --ring: oklch(0.65 0.15 150);
   --chart-1: oklch(0.72 0.17 150);
   --chart-2: oklch(0.68 0.005 85);
@@ -132,5 +139,20 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Accesibilidad (PLAN §9.1 Fase 8): quien pide menos movimiento no recibe
+   transiciones ni animaciones — incluye hover-lift de tarjetas, shimmer de los
+   skeletons y el sheet móvil. `scroll-behavior: smooth` se desactiva también. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }

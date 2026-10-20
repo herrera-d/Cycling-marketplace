@@ -150,7 +150,8 @@ function baseFilters(query: ListingQuery): SQL[] {
  *
  * Nota: el rango de precio (`min`/`max`) se aplica sobre `price_cents` sin
  * convertir moneda. Con varias monedas activas el filtro es una aproximación;
- * ver "deuda" en `docs/progress.md` (normalización de moneda, Fase 8).
+ * ver "limitaciones conocidas" en `docs/progress.md` (normalización de
+ * moneda: exige una API de tipos de cambio y no está en el alcance del MVP).
  */
 export async function getListingsPage(
   query: ListingQuery,
@@ -251,8 +252,8 @@ export async function getListingsPage(
 /**
  * Devuelve un anuncio completo para la página de detalle (PLAN §5.4).
  *
- * Solo se exponen anuncios publicados (`active`/`sold`): los borradores se
- * reservan para su dueño en la Fase 7. Devuelve `null` si no existe o no es
+ * Solo se exponen anuncios publicados (`active`/`sold`): los borradores solo
+ * los ve su dueño, en `/mis-articulos`. Devuelve `null` si no existe o no es
  * público, para que la página pueda responder 404.
  *
  * `cache()` deduplica la lectura dentro de un mismo render: la página de
@@ -390,4 +391,212 @@ export async function createListing(
   }
 
   return { id: created.id };
+}
+
+/** Actualiza un anuncio (solo propietario). */
+export async function updateListing(
+  listingId: string,
+  input: ListingFormValues,
+  sellerId: string,
+): Promise<void> {
+  const db = getDb();
+
+  const owner = await isListingOwner(listingId, sellerId);
+  if (!owner) throw new Error("No autorizado");
+
+  const categoryRows = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(eq(categories.slug, input.categorySlug))
+    .limit(1);
+  const categoryId = categoryRows[0]?.id;
+  if (!categoryId) throw new Error(`Categoría inexistente: ${input.categorySlug}`);
+
+  const priceCents = clampPriceCents(Math.round(input.price * 100));
+
+  await db
+    .update(listings)
+    .set({
+      title: input.title,
+      description: input.description,
+      priceCents,
+      currency: input.currency,
+      categoryId,
+      condition: input.condition,
+      brand: toNullableText(input.brand),
+      size: toNullableText(input.size),
+      location: input.location,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(listings.id, listingId), eq(listings.sellerId, sellerId)));
+
+  // Reemplazar imágenes (orden preservado según el array recibido)
+  await db.delete(listingImages).where(eq(listingImages.listingId, listingId));
+  await db.insert(listingImages).values(
+    input.images.map((url, position) => ({
+      listingId,
+      url,
+      position,
+    })),
+  );
+}
+
+/** Marca un anuncio como vendido (solo propietario). */
+export async function markListingSold(
+  listingId: string,
+  sellerId: string,
+): Promise<void> {
+  const db = getDb();
+  const owner = await isListingOwner(listingId, sellerId);
+  if (!owner) throw new Error("No autorizado");
+  await db
+    .update(listings)
+    .set({ status: "sold", updatedAt: new Date() })
+    .where(and(eq(listings.id, listingId), eq(listings.sellerId, sellerId)));
+}
+
+/** Elimina un anuncio (solo propietario). Devuelve URLs de imágenes para borrar del storage. */
+export async function deleteListing(
+  listingId: string,
+  sellerId: string,
+): Promise<string[]> {
+  const db = getDb();
+  const owner = await isListingOwner(listingId, sellerId);
+  if (!owner) throw new Error("No autorizado");
+
+  const images = await db
+    .select({ url: listingImages.url })
+    .from(listingImages)
+    .where(eq(listingImages.listingId, listingId));
+
+  const urls = images.map((i) => i.url);
+
+  await db.delete(listings).where(and(eq(listings.id, listingId), eq(listings.sellerId, sellerId)));
+
+  return urls;
+}
+
+/** Obtiene los anuncios de un usuario (todos los estados). */
+export async function getUserListings(
+  sellerId: string,
+): Promise<
+  Array<{
+    id: string;
+    title: string;
+    priceCents: number;
+    currency: string;
+    condition: (typeof listings.condition)["enumValues"][number];
+    status: (typeof listings.status)["enumValues"][number];
+    createdAt: string;
+    updatedAt: string | null;
+    location: string | null;
+    imageUrl: string | null;
+    categorySlug: string;
+    categoryName: string;
+  }>
+> {
+  const db = getDb();
+
+  const rows = await db
+    .select({
+      id: listings.id,
+      title: listings.title,
+      priceCents: listings.priceCents,
+      currency: listings.currency,
+      condition: listings.condition,
+      status: listings.status,
+      createdAt: listings.createdAt,
+      updatedAt: listings.updatedAt,
+      location: listings.location,
+      imageUrl: listingImages.url,
+      categorySlug: categories.slug,
+      categoryName: categories.name,
+    })
+    .from(listings)
+    .leftJoin(categories, eq(listings.categoryId, categories.id))
+    .leftJoin(
+      listingImages,
+      and(
+        eq(listingImages.listingId, listings.id),
+        eq(listingImages.position, 0),
+      ),
+    )
+    .where(eq(listings.sellerId, sellerId))
+    .orderBy(desc(listings.createdAt), desc(listings.id));
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    priceCents: row.priceCents,
+    currency: row.currency,
+    condition: row.condition,
+    status: row.status,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt?.toISOString() ?? null,
+    location: row.location,
+    imageUrl: row.imageUrl,
+    categorySlug: row.categorySlug ?? "",
+    categoryName: row.categoryName ?? "",
+  }));
+}
+
+/** Verifica si un usuario es el vendedor de un anuncio. */
+export async function isListingOwner(
+  listingId: string,
+  sellerId: string,
+): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: listings.id })
+    .from(listings)
+    .where(and(eq(listings.id, listingId), eq(listings.sellerId, sellerId)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/** Obtiene un anuncio para edición (solo del vendedor). */
+export async function getListingForEdit(listingId: string, sellerId: string) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: listings.id,
+      title: listings.title,
+      description: listings.description,
+      priceCents: listings.priceCents,
+      currency: listings.currency,
+      condition: listings.condition,
+      brand: listings.brand,
+      size: listings.size,
+      location: listings.location,
+      status: listings.status,
+      categorySlug: categories.slug,
+    })
+    .from(listings)
+    .innerJoin(categories, eq(listings.categoryId, categories.id))
+    .where(and(eq(listings.id, listingId), eq(listings.sellerId, sellerId)))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+
+  const images = await db
+    .select({ url: listingImages.url, position: listingImages.position })
+    .from(listingImages)
+    .where(eq(listingImages.listingId, listingId))
+    .orderBy(asc(listingImages.position));
+
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    price: Number((row.priceCents / 100).toFixed(2)),
+    currency: row.currency,
+    condition: row.condition,
+    brand: row.brand,
+    size: row.size,
+    location: row.location,
+    status: row.status,
+    categorySlug: row.categorySlug,
+    images: images.map((i) => i.url),
+  };
 }

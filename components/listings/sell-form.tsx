@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Controller, useForm, useWatch, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,33 +43,74 @@ const STEP_FIELDS: Path<ListingFormValues>[][] = [
 const selectClass =
   "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
 
-export function SellForm({ categories }: { categories: CategoryOption[] }) {
+export function SellForm({
+  categories,
+  initialValues,
+  editId,
+}: {
+  categories: CategoryOption[];
+  initialValues?: Partial<ListingFormValues>;
+  editId?: string;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [attemptedSteps, setAttemptedSteps] = useState<number[]>([]);
   const [publishAttempted, setPublishAttempted] = useState(false);
+  const isEdit = Boolean(editId);
+  void isEdit;
 
   const {
     register,
     handleSubmit,
     control,
     trigger,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ListingFormValues>({
     resolver: zodResolver(listingFormSchema),
     mode: "onTouched",
-    defaultValues: {
-      title: "",
-      description: "",
-      categorySlug: categories[0]?.slug ?? "",
-      condition: "good",
-      brand: "",
-      size: "",
-      currency: DEFAULT_CURRENCY,
-      location: "",
-      images: [],
-    },
+    defaultValues: initialValues
+      ? {
+          title: initialValues.title ?? "",
+          description: initialValues.description ?? "",
+          price: initialValues.price ?? 0,
+          categorySlug: initialValues.categorySlug ?? categories[0]?.slug ?? "",
+          condition: initialValues.condition ?? "good",
+          brand: initialValues.brand ?? "",
+          size: initialValues.size ?? "",
+          currency: initialValues.currency ?? DEFAULT_CURRENCY,
+          location: initialValues.location ?? "",
+          images: initialValues.images ?? [],
+        }
+      : {
+          title: "",
+          description: "",
+          categorySlug: categories[0]?.slug ?? "",
+          condition: "good",
+          brand: "",
+          size: "",
+          currency: DEFAULT_CURRENCY,
+          location: "",
+          images: [],
+        },
   });
+
+  useEffect(() => {
+    if (initialValues) {
+      reset({
+        title: initialValues.title ?? "",
+        description: initialValues.description ?? "",
+        price: initialValues.price ?? 0,
+        categorySlug: initialValues.categorySlug ?? categories[0]?.slug ?? "",
+        condition: initialValues.condition ?? "good",
+        brand: initialValues.brand ?? "",
+        size: initialValues.size ?? "",
+        currency: initialValues.currency ?? DEFAULT_CURRENCY,
+        location: initialValues.location ?? "",
+        images: initialValues.images ?? [],
+      });
+    }
+  }, [initialValues, categories, reset]);
 
   const values = useWatch({ control });
   const currencySymbol =

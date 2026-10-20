@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const limited = rateLimit(`upload:${user.id}`, {
+  const limited = await rateLimit(`upload:${user.id}`, {
     limit: UPLOAD_LIMIT,
     windowMs: UPLOAD_WINDOW_MS,
   });

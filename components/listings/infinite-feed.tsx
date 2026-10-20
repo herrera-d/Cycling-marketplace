@@ -17,9 +17,16 @@ type InfiniteFeedProps = {
   initialData: ListingsPage;
   /** Filtros normalizados; forman la query key. */
   query: ListingQuery;
+  favorites?: Set<string>;
+  isAuthenticated?: boolean;
 };
 
-export function InfiniteFeed({ initialData, query }: InfiniteFeedProps) {
+export function InfiniteFeed({
+  initialData,
+  query,
+  favorites = new Set<string>(),
+  isAuthenticated = false,
+}: InfiniteFeedProps) {
   const { clearAll } = useListingFilters();
   const {
     data,
@@ -94,7 +101,12 @@ export function InfiniteFeed({ initialData, query }: InfiniteFeedProps) {
     <div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
-          <ListingCard key={item.id} listing={item} />
+          <ListingCard
+            key={item.id}
+            listing={item}
+            isFavorite={favorites.has(item.id)}
+            isAuthenticated={isAuthenticated}
+          />
         ))}
       </div>
 

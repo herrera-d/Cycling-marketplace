@@ -1,57 +1,65 @@
-import { config } from "dotenv";
 import { eq, inArray, sql } from "drizzle-orm";
+import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 
-// Permite ejecutar `npm run db:seed` con .env.local (Next) o .env.
-config({ path: [".env.local", ".env"] });
-
-import { getDb } from "./index";
 import { DEMO_LISTINGS, DEMO_SELLER_ID } from "./demo-listings";
+import { getAppEnv, loadEnvFiles, requireDatabaseUrl, type AppEnv } from "./env";
+import { getDb } from "./index";
+import { CATEGORIES } from "./reference-data";
+import * as schema from "./schema";
 import {
   categories,
   listingImages,
   listings,
   users,
-  type NewCategory,
 } from "./schema";
 
+// Carga el entorno según APP_ENV antes de tocar la base (ver db/env.ts).
+loadEnvFiles();
+
 /**
- * Categorías del marketplace (coinciden con las del PLAN.md sección 4).
- * El campo `icon` guarda el nombre de un icono de lucide-react (kebab-case).
+ * Qué datos sembrar:
+ *   - `categories`: solo datos de referencia (categorías). Seguro en cualquier
+ *     ambiente, incluida producción (son idempotentes y la app los necesita).
+ *   - `demo`: vendedor + anuncios de demostración. **Bloqueado en producción**.
+ *   - `all`: ambos (default; uso de desarrollo).
  */
-const CATEGORIES: NewCategory[] = [
-  { name: "Bicicletas", slug: "bicicletas", icon: "bike" },
-  { name: "Componentes", slug: "componentes", icon: "cog" },
-  { name: "Ruedas", slug: "ruedas", icon: "circle-dot" },
-  { name: "Ropa", slug: "ropa", icon: "shirt" },
-  { name: "Calzado", slug: "calzado", icon: "footprints" },
-  { name: "Cascos", slug: "cascos", icon: "hard-hat" },
-  { name: "Accesorios", slug: "accesorios", icon: "backpack" },
-  { name: "Entrenamiento", slug: "entrenamiento", icon: "activity" },
-  { name: "Herramientas", slug: "herramientas", icon: "wrench" },
-];
+type SeedMode = "all" | "categories" | "demo";
 
-async function main() {
-  const db = getDb();
+function getSeedMode(): SeedMode {
+  const raw = (process.env.SEED_ONLY ?? "all").trim();
+  if (raw === "all" || raw === "categories" || raw === "demo") return raw;
+  throw new Error(`SEED_ONLY inválido: "${raw}". Valores: all | categories | demo.`);
+}
 
-  console.log("🔧 Asegurando extensión pg_trgm...");
-  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
+/**
+ * La base de producción debe arrancar **limpia** de contenido de demostración.
+ * Por eso el seed de demo se niega a correr con `APP_ENV=production`.
+ */
+function assertDemoAllowed(appEnv: AppEnv, mode: SeedMode): void {
+  const runsDemo = mode === "all" || mode === "demo";
+  if (runsDemo && appEnv === "production") {
+    throw new Error(
+      "Bloqueado: el seed de demo no corre en producción. " +
+        "La base de producción arranca limpia (solo datos de referencia). " +
+        "Usá APP_ENV=development | staging, o SEED_ONLY=categories.",
+    );
+  }
+}
 
+type Database = NeonHttpDatabase<typeof schema>;
+
+async function seedCategories(db: Database): Promise<void> {
   console.log(`🌱 Sembrando ${CATEGORIES.length} categorías...`);
   await db
     .insert(categories)
     .values(CATEGORIES)
     .onConflictDoNothing({ target: categories.slug });
+}
 
-  const categoryRows = await db
-    .select()
-    .from(categories)
-    .orderBy(categories.id);
-
-  const categoryIdBySlug = new Map(
-    categoryRows.map((row) => [row.slug, row.id]),
-  );
-
-  // --- Vendedor de demostración -------------------------------------------
+async function seedDemo(
+  db: Database,
+  categoryIdBySlug: Map<string, number>,
+): Promise<void> {
   console.log("👤 Asegurando vendedor de demostración...");
   await db
     .insert(users)
@@ -63,7 +71,6 @@ async function main() {
     })
     .onConflictDoNothing({ target: users.id });
 
-  // --- Anuncios de demostración -------------------------------------------
   const now = Date.now();
   const listingValues = DEMO_LISTINGS.flatMap((listing) => {
     const categoryId = categoryIdBySlug.get(listing.categorySlug);
@@ -140,6 +147,37 @@ async function main() {
       ),
     );
   await db.insert(listingImages).values(imageValues);
+}
+
+async function main() {
+  const appEnv = getAppEnv();
+  const mode = getSeedMode();
+
+  assertDemoAllowed(appEnv, mode);
+  requireDatabaseUrl(appEnv);
+
+  const db = getDb();
+  console.log(`🎯 APP_ENV=${appEnv} · SEED_ONLY=${mode}`);
+
+  console.log("🔧 Asegurando extensión pg_trgm...");
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
+
+  if (mode === "all" || mode === "categories") {
+    await seedCategories(db);
+  }
+
+  const categoryRows = await db
+    .select()
+    .from(categories)
+    .orderBy(categories.id);
+
+  const categoryIdBySlug = new Map(
+    categoryRows.map((row) => [row.slug, row.id]),
+  );
+
+  if (mode === "all" || mode === "demo") {
+    await seedDemo(db, categoryIdBySlug);
+  }
 
   const [{ count: listingCount }] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -147,7 +185,7 @@ async function main() {
     .where(eq(listings.status, "active"));
 
   console.log(
-    `✅ Seed completado: ${categoryRows.length} categorías y ${listingCount} anuncios activos.`,
+    `✅ Seed completado (${mode}): ${categoryRows.length} categorías y ${listingCount} anuncios activos.`,
   );
 }
 

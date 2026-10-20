@@ -49,13 +49,14 @@ export function ListingGallery({
             key={current}
             src={current}
             alt={title}
-            fill
+            width={1200}
+            height={900}
             /* `priority` está deprecado en Next 16: la imagen principal (LCP)
                se marca como `eager` + `fetchPriority="high"`. */
             loading={active === 0 ? "eager" : "lazy"}
             fetchPriority={active === 0 ? "high" : "auto"}
             sizes="(min-width: 1024px) 60vw, 100vw"
-            className="object-cover"
+            className="absolute inset-0 size-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -110,9 +111,10 @@ export function ListingGallery({
                 <Image
                   src={image}
                   alt=""
-                  fill
+                  width={80}
+                  height={80}
                   sizes="80px"
-                  className="object-cover"
+                  className="absolute inset-0 size-full object-cover"
                 />
               </button>
             </li>
