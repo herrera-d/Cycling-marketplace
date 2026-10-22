@@ -53,10 +53,19 @@ export async function FeedSection({
   ].filter((value) => value !== undefined && value !== "").length;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
+    <div className="grid gap-8 lg:grid-cols-[264px_1fr] lg:gap-10">
       <Filters categories={categories} activeCount={activeCount} />
 
       <div className="min-w-0">
+        {/* Cabecera de sección: el patrón de "eyebrow" (mayúsculas + tracking)
+            es lo que separa un encabezado de diseño de uno por defecto. */}
+        <div className="mb-6">
+          <p className="text-eyebrow">Anuncios</p>
+          <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight sm:text-3xl">
+            Encuentra tu próxima pieza
+          </h2>
+        </div>
+
         <FeedToolbar total={page.total} />
         <div className="mt-6">
           <InfiniteFeed

@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-inter);
+  --font-heading: var(--font-space-grotesk);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,95 +39,115 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  /* Radios escala (sección 6): sm 8 · md 12 · lg 16 · xl 24 px */
-  --radius-sm: calc(var(--radius) * 0.5);
-  --radius-md: calc(var(--radius) * 0.75);
+  /* Radios escala (sección 6): sm 5 · md 8 · lg 12 · xl 16 · 2xl 20 px.
+     Escala reequilibrada: menos "burbuja", más superficie editorial. */
+  --radius-sm: calc(var(--radius) * 0.45);
+  --radius-md: calc(var(--radius) * 0.7);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.5);
-  --radius-2xl: calc(var(--radius) * 2);
-  --radius-3xl: calc(var(--radius) * 2.5);
-  --radius-4xl: calc(var(--radius) * 3);
-  /* Sombras suaves tipo Airbnb */
+  --radius-xl: calc(var(--radius) * 1.3);
+  --radius-2xl: calc(var(--radius) * 1.7);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.8);
+  /* Sombras: borde fino + sombra difusa = "flotante" sin ruido visual.
+     Se redefinen en `.dark` (una sombra calculada sobre un fondo claro no
+     existe sobre negro: el negro la vuelve invisible). */
   --shadow-card: 0 1px 2px oklch(0.13 0.01 85 / 0.05),
-    0 8px 24px oklch(0.13 0.01 85 / 0.06);
+    0 8px 24px oklch(0.13 0.01 85 / 0.07);
   --shadow-lifted: 0 2px 4px oklch(0.13 0.01 85 / 0.06),
-    0 20px 48px oklch(0.13 0.01 85 / 0.12);
+    0 20px 48px oklch(0.13 0.01 85 / 0.13);
 }
 
+/* ==========================================================================
+   Tokens — sistema de diseño derivado de la referencia "DWELLEO" (dark mode).
+   Criterios:
+   · Fondo casi negro (#0A0A0A) con superficies "elevadas" por escalones.
+   · Acento lima neón (#C2FF00) en dark / verde profundo en light: un único
+     acento de alto croma, usado con avaro para que la UI no grite.
+   · Texto en 3 niveles (primario / secundario / terciario) y grises neutros.
+   · Bordes hairline (1px) + sombra difusa: profundidad sin ruido visual.
+   ========================================================================== */
 :root {
-  --background: oklch(0.995 0.002 85);
-  --foreground: oklch(0.17 0.01 85);
+  --background: oklch(0.982 0.002 85);
+  --foreground: oklch(0.16 0.01 85);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.01 85);
+  --card-foreground: oklch(0.16 0.01 85);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.01 85);
-  /* 0.55 → 0.52: el verde original daba 4.18:1 con texto blanco y 4.30:1
-     como texto sobre el fondo, por debajo del mínimo AA de 4.5:1 (WCAG 1.4.3). */
-  --primary: oklch(0.52 0.18 150);
+  --popover-foreground: oklch(0.16 0.01 85);
+  /* Acento light: verde profundo. `0.50 0.175 150` mantiene 5.1:1 con texto
+     blanco (WCAG 1.4.3 AA) y 5.09:1 como texto sobre el fondo. */
+  --primary: oklch(0.50 0.175 150);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0.004 85);
-  --secondary-foreground: oklch(0.205 0.01 85);
-  --muted: oklch(0.965 0.004 85);
-  --muted-foreground: oklch(0.52 0.01 85);
-  --accent: oklch(0.94 0.02 150);
-  --accent-foreground: oklch(0.35 0.09 150);
+  --secondary: oklch(0.96 0.004 85);
+  --secondary-foreground: oklch(0.22 0.01 85);
+  --muted: oklch(0.96 0.004 85);
+  --muted-foreground: oklch(0.50 0.01 85);
+  --accent: oklch(0.93 0.03 150);
+  --accent-foreground: oklch(0.34 0.09 150);
   --destructive: oklch(0.577 0.245 27.325);
-  /* Borde de campos: 0.90 daba 1.33:1 sobre el fondo. 0.65 llega a 3.15:1,
-     mínimo de información no textual (WCAG 1.4.11). `--border` sigue claro
-     porque es decorativo (tarjetas, separadores). */
-  --input: oklch(0.65 0.004 85);
+  /* Borde de campos: 0.62 da 3.46:1 sobre el fondo (WCAG 1.4.11 ≥ 3:1).
+     `--border` es decorativo (tarjetas, separadores) y puede ser más claro. */
+  --input: oklch(0.62 0.004 85);
   --border: oklch(0.9 0.004 85);
-  --ring: oklch(0.62 0.17 150);
-  --chart-1: oklch(0.62 0.17 150);
-  --chart-2: oklch(0.52 0.01 85);
+  --ring: oklch(0.55 0.17 150);
+  --chart-1: oklch(0.55 0.17 150);
+  --chart-2: oklch(0.50 0.01 85);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 1rem;
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.17 0.01 85);
-  --sidebar-primary: oklch(0.52 0.18 150);
+  --sidebar-foreground: oklch(0.16 0.01 85);
+  --sidebar-primary: oklch(0.50 0.175 150);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.94 0.02 150);
-  --sidebar-accent-foreground: oklch(0.35 0.09 150);
+  --sidebar-accent: oklch(0.93 0.03 150);
+  --sidebar-accent-foreground: oklch(0.34 0.09 150);
   --sidebar-border: oklch(0.9 0.004 85);
-  --sidebar-ring: oklch(0.62 0.17 150);
+  --sidebar-ring: oklch(0.55 0.17 150);
 }
 
 .dark {
-  --background: oklch(0.15 0.005 85);
-  --foreground: oklch(0.97 0.002 85);
-  --card: oklch(0.195 0.006 85);
-  --card-foreground: oklch(0.97 0.002 85);
-  --popover: oklch(0.195 0.006 85);
-  --popover-foreground: oklch(0.97 0.002 85);
-  --primary: oklch(0.72 0.17 150);
-  --primary-foreground: oklch(0.14 0.02 150);
-  --secondary: oklch(0.26 0.006 85);
-  --secondary-foreground: oklch(0.97 0.002 85);
-  --muted: oklch(0.26 0.006 85);
-  --muted-foreground: oklch(0.68 0.005 85);
-  --accent: oklch(0.28 0.06 150);
-  --accent-foreground: oklch(0.85 0.1 150);
+  --background: oklch(0.145 0 89.9);
+  --foreground: oklch(0.97 0 89.9);
+  --card: oklch(0.182 0 89.9);
+  --card-foreground: oklch(0.97 0 89.9);
+  --popover: oklch(0.191 0 89.9);
+  --popover-foreground: oklch(0.97 0 89.9);
+  /* Acento dark: lima neón (#C2FF00) con texto casi negro. Es el gesto que
+     define la referencia: un único color de alto croma sobre fondo profundo. */
+  --primary: oklch(0.924 0.233 125.3);
+  --primary-foreground: oklch(0.145 0 89.9);
+  --secondary: oklch(0.235 0 89.9);
+  --secondary-foreground: oklch(0.97 0 89.9);
+  --muted: oklch(0.218 0 89.9);
+  --muted-foreground: oklch(0.709 0 89.9);
+  --accent: oklch(0.3 0.045 125.3);
+  --accent-foreground: oklch(0.924 0.233 125.3);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  /* Mismo criterio que en claro: borde de campos opaco con ≥3:1 (WCAG 1.4.11);
-     el `--border` con alfa 10% queda solo para elementos decorativos. */
+  /* Hairline visible: #2A2A2A sobre cards #121212 (≈1.6:1). Con el valor
+     anterior (#1F1F1F) el borde desaparecía y las tarjetas se fundían con
+     el fondo — el detalle que hace que una UI oscura parezca "sin terminar". */
+  --border: oklch(0.285 0 89.9);
+  /* Borde de campo opaco con ≥3:1 (WCAG 1.4.11); `--border` queda solo
+     para elementos decorativos. */
   --input: oklch(0.52 0.004 85);
-  --ring: oklch(0.65 0.15 150);
-  --chart-1: oklch(0.72 0.17 150);
-  --chart-2: oklch(0.68 0.005 85);
+  --ring: oklch(0.924 0.233 125.3);
+  /* Sombras propias del tema oscuro: sobre negro, la sombra tiene que ser
+     pura y profunda para leerse. */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 10px 30px rgb(0 0 0 / 0.45);
+  --shadow-lifted: 0 2px 6px rgb(0 0 0 / 0.55), 0 26px 60px rgb(0 0 0 / 0.6);
+  --chart-1: oklch(0.924 0.233 125.3);
+  --chart-2: oklch(0.709 0 89.9);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.195 0.006 85);
-  --sidebar-foreground: oklch(0.97 0.002 85);
-  --sidebar-primary: oklch(0.72 0.17 150);
-  --sidebar-primary-foreground: oklch(0.14 0.02 150);
-  --sidebar-accent: oklch(0.26 0.006 85);
-  --sidebar-accent-foreground: oklch(0.97 0.002 85);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.65 0.15 150);
+  --sidebar: oklch(0.182 0 89.9);
+  --sidebar-foreground: oklch(0.97 0 89.9);
+  --sidebar-primary: oklch(0.924 0.233 125.3);
+  --sidebar-primary-foreground: oklch(0.145 0 89.9);
+  --sidebar-accent: oklch(0.3 0.045 125.3);
+  --sidebar-accent-foreground: oklch(0.924 0.233 125.3);
+  --sidebar-border: oklch(0.239 0 89.9);
+  --sidebar-ring: oklch(0.924 0.233 125.3);
 }
 
 @layer base {
@@ -139,7 +159,66 @@
   }
   html {
     @apply font-sans;
+    /* `color-scheme` hace que los controles nativos del navegador (scrollbars,
+       inputs, `select`) adopten el tema en vez de quedar en claro sobre fondo
+       oscuro. */
+    color-scheme: light;
   }
+  html.dark {
+    color-scheme: dark;
+  }
+  /* Jerarquía tipográfica: los títulos usan la grotesca de display; el cuerpo
+     se mantiene en Inter para no_castigar la legibilidad del texto largo. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading tracking-tight;
+  }
+}
+
+/* ==========================================================================
+   Utilidades de craft — el detalle que separa un diseño "pulido" de uno
+   generado. Basadas en la referencia "DWELLEO".
+   ========================================================================== */
+@utility glow-accent {
+  /* Blob de luz difusa detrás del hero. En dark es lima; en light, verde.
+     Es el "aire" atmosférico de la referencia: sin él, el fondo queda plano. */
+  background: radial-gradient(
+    55% 55% at 50% 45%,
+    color-mix(in oklab, var(--primary) 30%, transparent) 0%,
+    color-mix(in oklab, var(--primary) 8%, transparent) 45%,
+    transparent 72%
+  );
+}
+
+@utility glow-muted {
+  /* Contrapunto del blob principal: un halo frío y amplio que separa el
+     hero del fondo sin necesidad de un borde. */
+  background: radial-gradient(
+    70% 60% at 50% 50%,
+    color-mix(in oklab, var(--foreground) 7%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+@utility text-eyebrow {
+  /* Etiqueta de sección: mayúsculas + tracking amplio. */
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+@utility surface-raised {
+  /* Superficie elevada con borde hairline: da profundidad sin sombras duras. */
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.04),
+    0 8px 24px oklch(0 0 0 / 0.06);
 }
 
 /* Accesibilidad (PLAN §9.1 Fase 8): quien pide menos movimiento no recibe

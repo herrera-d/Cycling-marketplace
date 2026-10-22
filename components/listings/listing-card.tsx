@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff } from "lucide-react";
+import { ImageOff, MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { conditionLabel, formatPrice } from "@/lib/format";
@@ -8,8 +8,12 @@ import type { ListingCardData } from "@/lib/listings-types";
 import { FavoriteButtonCard } from "@/components/listings/favorite-button-card";
 
 /**
- * Tarjeta de anuncio del feed (PLAN §6.2): imagen 4:3, precio destacado,
- * badge de condición, hover con elevación + zoom y foco visible.
+ * Tarjeta de anuncio del feed (PLAN §6.2).
+ *
+ * Anatomía (referencia de diseño): imagen a sangre arriba con degradado
+ * inferior, precio como elemento protagonista, título debajo y metadatos
+ * discretos al pie. El hover eleva la tarjeta, afina el borde y hace zoom
+ * muy leve a la imagen.
  */
 export function ListingCard({
   listing,
@@ -23,7 +27,7 @@ export function ListingCard({
   return (
     <Link
       href={`/listings/${listing.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-card transition-[transform,box-shadow,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-foreground/20 hover:shadow-lifted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       {/* `aspect-[4/3]` (barra): la forma `4:3` produce CSS inválido
           (`aspect-ratio: 4:3`) y el bloque de la imagen colapsaba a 0. */}
@@ -37,7 +41,7 @@ export function ListingCard({
             width={640}
             height={480}
             sizes="(min-width: 1280px) 22vw, (min-width: 768px) 30vw, 50vw"
-            className="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-105"
+            className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/40 text-muted-foreground">
@@ -45,9 +49,16 @@ export function ListingCard({
           </div>
         )}
 
+        {/* Degradado inferior: da profundidad a la foto y separa la imagen
+            del bloque de texto sin añadir un borde duro. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+        />
+
         <Badge
           variant="secondary"
-          className="absolute left-3 top-3 shadow-sm backdrop-blur-sm"
+          className="absolute left-3 top-3 border border-white/15 bg-background/85 text-foreground shadow-sm backdrop-blur-md"
         >
           {conditionLabel(listing.condition)}
         </Badge>
@@ -61,18 +72,27 @@ export function ListingCard({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <p className="text-lg font-semibold tracking-tight">
+      <div className="flex flex-1 flex-col gap-1 p-4">
+        <p className="font-heading text-xl font-bold tracking-tight text-foreground">
           {formatPrice(listing.priceCents, listing.currency)}
         </p>
 
-        <h3 className="line-clamp-2 text-sm font-medium leading-snug">
+        <h3 className="line-clamp-2 text-[0.9375rem] font-semibold leading-snug text-foreground/90">
           {listing.title}
         </h3>
 
-        <p className="mt-auto truncate pt-2 text-xs text-muted-foreground">
-          {[listing.location, listing.categoryName].filter(Boolean).join(" · ")}
-        </p>
+        {listing.location ? (
+          <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+            <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+            {listing.location}
+          </p>
+        ) : null}
+
+        {listing.categoryName ? (
+          <p className="mt-auto pt-2.5 text-xs text-muted-foreground/80">
+            {listing.categoryName}
+          </p>
+        ) : null}
       </div>
     </Link>
   );

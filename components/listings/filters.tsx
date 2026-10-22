@@ -94,7 +94,7 @@ function FilterControls({ categories }: { categories: CategoryOption[] }) {
             onClick={() => setFilter("categoria", null)}
             aria-pressed={!values.categoria}
             className={cn(
-              "rounded-full border px-3 py-1.5 text-sm transition-colors",
+              "flex items-center rounded-full border px-3 py-1.5 text-sm transition-colors",
               !values.categoria
                 ? "border-primary bg-primary/10 font-medium text-primary"
                 : "hover:border-primary/40 hover:text-primary",
@@ -113,14 +113,14 @@ function FilterControls({ categories }: { categories: CategoryOption[] }) {
                 }
                 aria-pressed={active}
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
                   active
                     ? "border-primary bg-primary/10 font-medium text-primary"
                     : "hover:border-primary/40 hover:text-primary",
                 )}
               >
-                <CategoryIcon name={category.icon} className="size-4" />
-                {category.name}
+                <CategoryIcon name={category.icon} className="size-4 shrink-0" />
+                <span>{category.name}</span>
               </button>
             );
           })}
@@ -214,7 +214,13 @@ export function Filters({ categories, activeCount }: FiltersProps) {
     <>
       {/* Escritorio: barra lateral sticky */}
       <aside className="hidden lg:block">
-        <div className="sticky top-24 flex flex-col gap-6 rounded-2xl border bg-card p-5">
+        <div className="sticky top-24 flex flex-col gap-6 rounded-2xl border border-border bg-card p-5 shadow-card">
+          <div>
+            <p className="text-eyebrow">Refinar</p>
+            <h2 className="mt-2 font-heading text-lg font-semibold tracking-tight">
+              Filtros
+            </h2>
+          </div>
           <SearchField />
           <FilterControls categories={categories} />
         </div>

@@ -3,10 +3,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 /** Esqueleto de tarjeta (shimmer) para la carga inicial y el scroll. */
 export function ListingCardSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border bg-card">
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card">
       <Skeleton className="aspect-[4/3] w-full rounded-none" />
       <div className="flex flex-col gap-2 p-4">
-        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-6 w-24" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="mt-3 h-3 w-1/2" />
@@ -19,7 +19,7 @@ export function ListingCardSkeleton() {
 export function ListingGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div
-      className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+      className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4 lg:gap-6"
       aria-hidden="true"
     >
       {Array.from({ length: count }, (_, index) => (

@@ -40,7 +40,7 @@ Un marketplace donde cualquier persona puede **navegar y ver artículos de cicli
 | Imágenes | **Supabase Storage** (bucket público `listings`) | Free tier |
 | Data fetching | **TanStack Query v5** (`useInfiniteQuery`) | Gratis / open source |
 | Formularios / validación | **React Hook Form + Zod** | Gratis / open source |
-| Rate limiting | **Upstash Redis** (free tier) | Gratis |
+| Rate limiting | **Tabla `rate_limits` en Neon** (upsert atómico, sin servicio extra) | Gratis |
 | Deploy | **Vercel** (plan Hobby) | Gratis |
 
 > Todos los servicios cuentan con tier gratuito suficiente para un MVP en producción.
@@ -311,19 +311,21 @@ PLAN.md
 - [ ] Acciones con toast y confirmación en borrado.
 
 #### Fase 8 — Pulido + audit
-- [ ] Design review de `ui-designer`: estados vacío, carga, error y sin sesión.
-- [ ] Auditoría de `security-auditor`: auth, API, uploads, secretos, rate limiting, dependencias.
-- [ ] Validación total: todas las features del MVP cumpliendo sus DoD.
-- [ ] Accesibilidad: contraste AA, focus states, `prefers-reduced-motion`.
-- [ ] SEO global: metadata, sitemap, robots.txt, OG.
-- [ ] `tsc`, lint y build sin errores; sin advertencias de consola.
+- [x] Design review de `ui-designer`: estados vacío, carga, error y sin sesión (consolidados y re-verificados en el smoke test de Fase 9).
+- [x] Auditoría de `security-auditor`: auth, API, uploads, secretos, rate limiting, dependencias (`npm audit --omit=dev` = 0 vulnerabilidades; 13 restantes solo en devDeps).
+- [x] Validación total: todas las features del MVP cumpliendo sus DoD (Fases 0–7 PASS).
+- [x] Accesibilidad: contraste AA verificado por script (`npm run check:contrast` → 24/24), focus states, `prefers-reduced-motion`.
+- [x] SEO global: metadata, sitemap, robots.txt, OG (`app/opengraph-image.tsx`).
+- [x] `tsc`, lint y build sin errores ni warnings (14/14 páginas).
+- [x] Rate limiting propio en Neon (tabla `rate_limits`, upsert atómico, fail-open) en favoritos (60/min), publicar (10/h) y upload (60/10 min).
+- [x] CSP estricta en producción (sin `unsafe-eval`), `form-action` con `accounts.google.com` para el POST nativo del login.
 
 #### Fase 9 — Deploy final
-- [ ] Variables de entorno configuradas en Vercel (producción).
-- [ ] Dominio con HTTPS activo.
-- [ ] Monitoreo/analítica configurados.
-- [ ] Smoke test manual end-to-end (login, feed, filtros, scroll, publicar, favoritos, mis-artículos).
-- [ ] `PLAN.md` y `docs/progress.md` reflejan el estado final.
+- [x] Variables de entorno configuradas en Vercel (dos proyectos: `cycling-marketplace` y `cycling-marketplace-staging`).
+- [x] Dominio con HTTPS activo: `cycling-marketplace.vercel.app` (TLS gestionado por Vercel; sin dominio propio).
+- [x] Monitoreo/analítica configurados: Vercel Analytics + Speed Insights en ambos proyectos.
+- [x] Smoke test end-to-end en staging (login, feed, filtros, scroll, publicar, favoritos, mis-artículos) y producción vacía verificada (0 anuncios).
+- [x] `PLAN.md` y `docs/progress.md` reflejan el estado final.
 
 ---
 
@@ -333,11 +335,15 @@ PLAN.md
 DATABASE_URL                              # Neon (production: pooled URL)
 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET   # Google Cloud Console
 AUTH_SECRET                               # openssl rand -base64 32
-NEXTAUTH_URL                              # URL de producción (o AUTH_URL)
+AUTH_URL                                  # URL del deployment (https://…vercel.app)
+NEXT_PUBLIC_SITE_URL                      # origen público (sitemap/robots/OG)
 NEXT_PUBLIC_SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY                 # ¡nunca en cliente, solo servidor!
-UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
+NEXT_PUBLIC_SUPABASE_BUCKET               # listings / listings-staging / listings-prod
 ```
+
+> El rate limiting no necesita variables: los contadores viven en la tabla
+> `rate_limits` de Neon (ver §11).
 
 ---
 
@@ -345,7 +351,7 @@ UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
 
 - **Límites free tier:** Vercel (invocaciones y duración de funciones), Neon (storage 0.5 GB) y Supabase (1 GB). Servir imágenes siempre desde Supabase, nunca desde una función de Vercel.
 - **Cold start de Neon:** mitigar con connection pooling y, si hace falta, queries optimizadas.
-- **Seguridad:** nunca exponer `SUPABASE_SERVICE_ROLE_KEY` al cliente; validar `sellerId`/`userId` contra la sesión en cada endpoint; rate limiting en `POST /api/listings` y uploads (Upstash).
+- **Seguridad:** nunca exponer `SUPABASE_SERVICE_ROLE_KEY` al cliente; validar `sellerId`/`userId` contra la sesión en cada endpoint; rate limiting en `POST /api/listings`, uploads y favoritos con la tabla `rate_limits` de Neon (sin servicio externo; fail-open si la BD falla).
 - **Abuso de imágenes:** validar tipo (jpeg/png/webp), tamaño y límites; nombres aleatorios en el bucket.
 - **SEO:** feed y detalle en Server Components con metadata; `next/image` para optimización.
 
