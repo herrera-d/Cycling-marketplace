@@ -64,7 +64,7 @@ export function FavoriteButtonCard({
       aria-pressed={isAuthenticated ? favorite : undefined}
       aria-label={favorite ? "Quitar de favoritos" : "Guardar en favoritos"}
       className={cn(
-        "relative z-10 size-9 rounded-full bg-background/80 shadow-sm backdrop-blur-sm hover:bg-background",
+        "relative z-10 size-9 rounded-full bg-background/90 shadow-sm hover:bg-background",
         className,
       )}
     >

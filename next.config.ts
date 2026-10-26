@@ -63,6 +63,10 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    /* Las imágenes de anuncios son inmutables (nombre UUID en el bucket) y
+       las de demo tampoco cambian: cachear la variante optimizada 1 año evita
+       reoptimizar/revalidar en cada visita (clave en 3G y en el scroll). */
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       // Imágenes subidas por los usuarios a Supabase Storage (bucket público).

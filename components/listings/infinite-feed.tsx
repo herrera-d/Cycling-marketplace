@@ -73,7 +73,7 @@ export function InfiniteFeed({
           void fetchNextPage();
         }
       },
-      { rootMargin: "600px 0px" },
+      { rootMargin: "300px 0px" },
     );
 
     observer.observe(node);
@@ -100,12 +100,15 @@ export function InfiniteFeed({
   return (
     <div>
       <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4 lg:gap-6">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <ListingCard
             key={item.id}
             listing={item}
             isFavorite={favorites.has(item.id)}
             isAuthenticated={isAuthenticated}
+            /* Sólo la primera fila móvil (2 tarjetas) se precarga: en 3G
+               competir por ancho de banda con 8 imágenes ralentiza el LCP. */
+            imagePriority={index < 2}
           />
         ))}
       </div>

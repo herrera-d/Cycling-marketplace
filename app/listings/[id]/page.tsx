@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { ChevronRight, MapPin } from "lucide-react";
 
 import { CategoryIcon } from "@/components/listings/category-icon";
 import { FavoriteButton } from "@/components/listings/favorite-button";
 import { ListingCard } from "@/components/listings/listing-card";
+import { ListingGridSkeleton } from "@/components/listings/listing-card-skeleton";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { SellerCard } from "@/components/listings/seller-card";
 import { Footer } from "@/components/site/footer";
@@ -14,6 +16,7 @@ import { Header } from "@/components/site/header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getOptionalUser } from "@/lib/dal";
 import { isListingFavorite } from "@/lib/favorites";
 import { conditionLabel, formatPrice } from "@/lib/format";
@@ -58,9 +61,10 @@ export async function generateMetadata({
 }
 
 /**
- * La ruta depende de `params` y de la BD, así que bloquea en el servidor
- * (`instant = false`). Así la respuesta es un 404 real para ids inexistentes
- * (importante para SEO) en lugar de un shell ya enviado con estado 200.
+ * La ruta depende de `params` y de la BD, así que se renderiza por petición
+ * bajo `cacheComponents` (`connection()`). `instant = false` sólo desactiva la
+ * validación de navegaciones instantáneas en desarrollo; no cambia el status
+ * HTTP (el shell con `loading.tsx` se sirve antes de resolver el anuncio).
  */
 export const instant = false;
 
@@ -74,25 +78,11 @@ export default async function ListingDetailPage({
   const parsed = listingIdSchema.safeParse(id);
   if (!parsed.success) notFound();
 
-  // El anuncio y la sesión son independientes: se resuelven en paralelo.
-  const [listing, user] = await Promise.all([
-    getListingById(parsed.data),
-    getOptionalUser(),
-  ]);
+  // El anuncio es lo único que bloquea el primer render. La sesión, el estado
+  // de favorito y los relacionados se resuelven en sus propios `<Suspense>`:
+  // en 3G eso evita esperar 3–4 round trips a la BD antes de ver la ficha.
+  const listing = await getListingById(parsed.data);
   if (!listing) notFound();
-
-  // "Más de esta categoría": hasta 4 anuncios, excluyendo el actual.
-  const relatedQuery = listingQuerySchema.parse({
-    categoria: listing.categorySlug,
-    limit: 5,
-  });
-  const [isFavorite, relatedPage] = await Promise.all([
-    user?.id ? isListingFavorite(user.id, listing.id) : Promise.resolve(false),
-    getListingsPage(relatedQuery),
-  ]);
-  const related = relatedPage.items
-    .filter((item) => item.id !== listing.id)
-    .slice(0, 4);
 
   const details: Array<{ label: string; value: string }> = [
     { label: "Categoría", value: listing.categoryName },
@@ -173,11 +163,15 @@ export default async function ListingDetailPage({
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <FavoriteButton
-                listingId={listing.id}
-                initialFavorite={isFavorite}
-                isAuthenticated={Boolean(user?.id)}
-              />
+              {/* El estado de favorito requiere una consulta extra: se
+                  transmite sin bloquear el precio ni la galería. */}
+              <Suspense
+                fallback={
+                  <Skeleton className="h-9 w-full rounded-full sm:w-36" />
+                }
+              >
+                <FavoriteSection listingId={listing.id} />
+              </Suspense>
               <Button
                 nativeButton={false}
                 render={<Link href={`/?categoria=${listing.categorySlug}`} />}
@@ -234,25 +228,88 @@ export default async function ListingDetailPage({
           </div>
         </div>
 
-        {/* Relacionados */}
-        {related.length > 0 ? (
-          <section
-            aria-labelledby="relacionados"
-            className="mt-16 border-t pt-10"
-          >
-            <h2 id="relacionados" className="text-xl font-semibold tracking-tight">
-              Más de {listing.categoryName}
-            </h2>
-            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {related.map((item) => (
-                <ListingCard key={item.id} listing={item} />
-              ))}
-            </div>
-          </section>
-        ) : null}
+        {/* Relacionados: no son críticos para la ficha y añaden otra ronda de
+            consultas. Se transmiten aparte para no retrasar el primer render. */}
+        <Suspense fallback={<RelatedSkeleton />}>
+          <RelatedListings
+            listingId={listing.id}
+            categorySlug={listing.categorySlug}
+            categoryName={listing.categoryName}
+          />
+        </Suspense>
       </main>
 
       <Footer />
     </>
+  );
+}
+
+/** Estado de favorito (sesión + consulta), aislado en su propio Suspense. */
+async function FavoriteSection({ listingId }: { listingId: string }) {
+  const user = await getOptionalUser();
+  const isFavorite = user?.id
+    ? await isListingFavorite(user.id, listingId)
+    : false;
+
+  return (
+    <FavoriteButton
+      listingId={listingId}
+      initialFavorite={isFavorite}
+      isAuthenticated={Boolean(user?.id)}
+    />
+  );
+}
+
+/** "Más de esta categoría" (hasta 4), tolerante a fallos. */
+async function RelatedListings({
+  listingId,
+  categorySlug,
+  categoryName,
+}: {
+  listingId: string;
+  categorySlug: string;
+  categoryName: string;
+}) {
+  const relatedQuery = listingQuerySchema.parse({
+    categoria: categorySlug,
+    limit: 5,
+  });
+
+  let related: Awaited<ReturnType<typeof getListingsPage>>["items"] = [];
+  try {
+    const page = await getListingsPage(relatedQuery);
+    related = page.items.filter((item) => item.id !== listingId).slice(0, 4);
+  } catch {
+    // Los relacionados son secundarios: un fallo aquí no debe romper la ficha.
+    return null;
+  }
+
+  if (related.length === 0) return null;
+
+  return (
+    <section aria-labelledby="relacionados" className="mt-16 border-t pt-10">
+      <h2 id="relacionados" className="text-xl font-semibold tracking-tight">
+        Más de {categoryName}
+      </h2>
+      <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        {related.map((item) => (
+          <ListingCard key={item.id} listing={item} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RelatedSkeleton() {
+  return (
+    <section
+      aria-hidden="true"
+      className="mt-16 border-t pt-10"
+    >
+      <Skeleton className="h-6 w-56" />
+      <div className="mt-6">
+        <ListingGridSkeleton count={4} />
+      </div>
+    </section>
   );
 }
