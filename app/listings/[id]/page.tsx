@@ -11,6 +11,7 @@ import { ListingCard } from "@/components/listings/listing-card";
 import { ListingGridSkeleton } from "@/components/listings/listing-card-skeleton";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { SellerCard } from "@/components/listings/seller-card";
+import { ShareWhatsAppButton } from "@/components/listings/share-whatsapp-button";
 import { Footer } from "@/components/site/footer";
 import { Header } from "@/components/site/header";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,40 @@ export async function generateMetadata({
       : listing.description;
   const cover = listing.images[0];
 
+  // Usamos el optimizador de Next para reducir el tamaño de la imagen OG
+  // sin duplicar archivos en Supabase (evita gastar el storage del tier gratuito).
+  // Si algún día se alcanza el límite de Vercel Image Optimization, los og:image
+  // pueden fallar: aquí tenemos fallback al original o a una imagen estática.
+  let ogImageUrl: string | undefined = cover;
+  if (cover) {
+    try {
+      ogImageUrl = `/_next/image?url=${encodeURIComponent(cover)}&w=1200&q=75`;
+      if (process.env.NODE_ENV === "development") {
+        console.debug(`[og:image] listing=${listing.id} optimized=${ogImageUrl}`);
+      }
+    } catch (error) {
+      console.error(
+        "[og:image] No se pudo construir la URL del optimizador de Next, usando imagen original.",
+        { listingId: listing.id, error },
+      );
+      ogImageUrl = cover;
+    }
+  }
+
+  const images = ogImageUrl
+    ? [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          type: "image/jpeg",
+          alt: listing.title,
+        },
+      ]
+    : undefined;
+
+  const twitterImages = ogImageUrl ? [ogImageUrl] : undefined;
+
   return {
     title: `${listing.title} — ${price}`,
     description,
@@ -55,7 +90,13 @@ export async function generateMetadata({
       title: `${listing.title} — BiciMarket`,
       description,
       type: "article",
-      images: cover ? [{ url: cover, alt: listing.title }] : undefined,
+      images,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${listing.title} — BiciMarket`,
+      description,
+      images: twitterImages,
     },
   };
 }
@@ -162,7 +203,7 @@ export default async function ListingDetailPage({
               </span>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               {/* El estado de favorito requiere una consulta extra: se
                   transmite sin bloquear el precio ni la galería. */}
               <Suspense
@@ -172,6 +213,11 @@ export default async function ListingDetailPage({
               >
                 <FavoriteSection listingId={listing.id} />
               </Suspense>
+              <ShareWhatsAppButton
+                title={listing.title}
+                price={formatPrice(listing.priceCents, listing.currency)}
+                url={`https://cycling-marketplace-staging.vercel.app/listings/${listing.id}`}
+              />
               <Button
                 nativeButton={false}
                 render={<Link href={`/?categoria=${listing.categorySlug}`} />}
