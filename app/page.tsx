@@ -57,7 +57,7 @@ export default function HomePage({ searchParams }: PageProps<"/">) {
             className="glow-accent pointer-events-none absolute left-1/2 top-0 h-[560px] w-[min(1100px,125%)] -translate-x-1/2"
           />
 
-          <div className="relative mx-auto w-full max-w-7xl px-4 pb-20 pt-20 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative mx-auto w-full max-w-7xl px-5 pb-20 pt-20 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
             <div className="mx-auto max-w-3xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3.5 py-1.5 text-[0.8125rem] font-medium tracking-wide text-muted-foreground backdrop-blur-sm">
                 <Bike className="size-4 text-primary" aria-hidden="true" />
@@ -128,7 +128,7 @@ export default function HomePage({ searchParams }: PageProps<"/">) {
         <section
           id="anuncios"
           aria-label="Anuncios"
-          className="mx-auto w-full max-w-7xl scroll-mt-20 px-4 pb-20 sm:px-6 lg:px-8"
+          className="mx-auto w-full max-w-7xl scroll-mt-20 px-5 pb-20 sm:px-6 lg:px-8"
         >
           <Suspense fallback={<FeedFallback />}>
             <FeedSection searchParams={searchParams} />

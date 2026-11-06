@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 md:bg-background/80 md:backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           <Link
             href="/"
@@ -24,7 +24,7 @@ export function Header() {
             <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground transition-transform duration-200 group-hover:scale-105">
               <Bike className="size-5" aria-hidden="true" />
             </span>
-            <span className="font-heading text-lg font-semibold tracking-tight">
+            <span className="font-heading text-lg font-semibold tracking-tight max-[359px]:hidden">
               BiciMarket
             </span>
           </Link>
@@ -53,10 +53,9 @@ export function Header() {
           <Button
             nativeButton={false}
             render={<Link href="/sell" />}
-            className="rounded-full px-4 shadow-sm"
+            className="hidden rounded-full px-4 shadow-sm sm:inline-flex"
           >
-            <span className="hidden sm:inline">Publicar artículo</span>
-            <span className="sm:hidden">Publicar</span>
+            Publicar artículo
           </Button>
 
           <Suspense fallback={<HeaderAuthFallback />}>

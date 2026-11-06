@@ -21,7 +21,7 @@ export async function HeaderAuth() {
         nativeButton={false}
         render={<Link href="/login" />}
         variant="ghost"
-        className="rounded-full"
+        className="h-10 rounded-full sm:h-8"
       >
         Iniciar sesión
       </Button>

@@ -33,7 +33,7 @@ const COPYRIGHT_YEAR = new Date().getFullYear();
 export function Footer() {
   return (
     <footer className="mt-auto border-t border-border bg-card/40">
-      <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-5 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
           <div className="max-w-sm">
             <Link

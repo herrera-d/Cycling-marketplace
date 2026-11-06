@@ -92,7 +92,7 @@ export function ListingCard({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 p-4">
+      <div className="flex flex-1 flex-col gap-1.5 p-3.5 sm:p-4">
         <p className="font-heading text-xl font-bold tracking-tight text-foreground">
           {formatPrice(listing.priceCents, listing.currency)}
         </p>
